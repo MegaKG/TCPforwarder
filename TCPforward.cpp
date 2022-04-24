@@ -1,17 +1,18 @@
 #include <iostream>
 #include "TCPstreams.hpp"
-#include "StringInputs.h"
+#include "StringInputs2.h"
 #include <vector>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
 using namespace std;
 
-const string HostIP = "0.0.0.0";
-const string DestIP = "127.0.0.1";
-const int HostPort = 5000;
-const int DestPort = 5001;
-const int bufsize = 1024;
+//Filler Initial Values, to be initialised
+string HostIP = "127.0.0.1";
+string DestIP = "127.0.0.1";
+int HostPort = 5000;
+int DestPort = 5000;
+int bufsize = 1024;
 
 void loadConfig(){
 
@@ -45,6 +46,7 @@ void* forwarder(void* VIn){
     while (In->MyCon->Status){
     //while (1){
         haveread = read(serv, Buffer, bufsize);
+        //printf("%i\n",haveread);
         //printf("RECV\n");
         if (haveread == 0){
             break;
@@ -110,10 +112,24 @@ void garbageCollector(){
 
 }
 
-int main(){
+int main(int argc, char** argv){
     int cserver;
     int ccon;
     int counter = 0;
+
+    if (argc < 6){
+        printf("Usage:\n%s <IP HOST> <PORT HOST> <IP TARGET> <PORT TARGET> <BUFFER SIZE>\nEG: %s 0.0.0.0 5000 192.168.1.4 3000 1024\n", argv[0], argv[0]);
+        printf("This would host on 0.0.0.0:5000 and forward to 192.168.1.4:3000 with buffer of 1024\n");
+        return -1; 
+    }
+    
+    HostIP.assign(argv[1]);
+    DestIP.assign(argv[3]);
+    HostPort = stosi(argv[2]);
+    DestPort = stosi(argv[4]);
+    bufsize = stosi(argv[5]);
+
+    printf("Forwarding %s:%i to %s:%i buffer %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize);
 
     while (true){
         cserver = openserver(HostIP,HostPort);
