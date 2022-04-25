@@ -63,42 +63,49 @@ void* forwarder(void* VIn){
 }
 
 void* clienthandle(void* VIn){
-    printf("-> Thread Start\n");
     struct connection* MyCon = (struct connection*)VIn;
+    int myid = MyCon->ID;
+    printf("%i -> Thread Start\n",myid);
+    
     //Open To Server
     MyCon->ClientCon = openclient(DestIP,DestPort);
-    printf("-> Success Opening Client %i\n",MyCon->ID);
+    if (MyCon->ClientCon > 0){
+        printf("%i -> Success Opening Client\n",myid);
 
-    struct args* C2SA = (struct args*)malloc(sizeof(struct args));
-    struct args* S2CA = (struct args*)malloc(sizeof(struct args));
-    C2SA->from = MyCon->ClientCon;
-    C2SA->to = MyCon->ServerCon;
-    C2SA->MyCon = MyCon;
+        struct args* C2SA = (struct args*)malloc(sizeof(struct args));
+        struct args* S2CA = (struct args*)malloc(sizeof(struct args));
+        C2SA->from = MyCon->ClientCon;
+        C2SA->to = MyCon->ServerCon;
+        C2SA->MyCon = MyCon;
 
-    S2CA->to = MyCon->ClientCon;
-    S2CA->from = MyCon->ServerCon;
-    S2CA->MyCon = MyCon;
-    printf("-> Gen Connection Data\n");
+        S2CA->to = MyCon->ClientCon;
+        S2CA->from = MyCon->ServerCon;
+        S2CA->MyCon = MyCon;
+        printf("%i -> Gen Connection Data\n",myid);
 
-    pthread_t* C2S = (pthread_t*)malloc(sizeof(pthread_t));
-    pthread_create(C2S, NULL, &forwarder, C2SA);
-    printf("-> Start C2S\n");
+        pthread_t* C2S = (pthread_t*)malloc(sizeof(pthread_t));
+        pthread_create(C2S, NULL, &forwarder, C2SA);
+        printf("%i -> Start C2S\n",myid);
 
-    pthread_t* S2C = (pthread_t*)malloc(sizeof(pthread_t));
-    pthread_create(S2C, NULL, &forwarder, S2CA);
-    printf("-> Start S2C\n");
+        pthread_t* S2C = (pthread_t*)malloc(sizeof(pthread_t));
+        pthread_create(S2C, NULL, &forwarder, S2CA);
+        printf("%i -> Start S2C\n",myid);
 
-    while (1){
-        sleep(1);
-        //printf("-> Await\n");
+        while (1){
+            sleep(1);
+            //printf("-> Await\n");
+        }
+        //forwarder(S2CA);
+        printf("%i -> Terminate\n",myid);
     }
-    //forwarder(S2CA);
-    printf("-> Term\n");
+    else {
+        printf("%i -> Connection Failure\n",myid);
+    }
 
     //Inform the Grim Reaper that we have died
     close(MyCon->ClientCon);
     close(MyCon->ServerCon);
-    printf("-> Died\n");
+    printf("%i -> Died\n",myid);
     
 }
 
@@ -146,28 +153,34 @@ int main(int argc, char** argv){
     while (true){
         printf("Awaiting Connection\n");
         ccon = accept(cserver);
-        printf("Accepted Client %i\n",counter);
-        
+        if (ccon <= 0){
+            printf("Accept Failure\n");
+        }
+        else {
+            printf("Accepted Client %i\n",counter);
+            
 
-        //Create Connection info
-        struct connection* NewCon = (struct connection*)malloc(sizeof(struct connection));
-        NewCon->Server = cserver;
-        NewCon->ServerCon = ccon;
-        NewCon->Status = 1;
-        NewCon->ClientCon = 0;
-        NewCon->ID = counter;
-        Cons.push_back(NewCon);
-        printf("Made Connection\n");
-        counter += 1;
+            //Create Connection info
+            struct connection* NewCon = (struct connection*)malloc(sizeof(struct connection));
+            NewCon->Server = cserver;
+            NewCon->ServerCon = ccon;
+            NewCon->Status = 1;
+            NewCon->ClientCon = 0;
+            NewCon->ID = counter;
+            Cons.push_back(NewCon);
+            printf("Made Connection\n");
+            counter += 1;
 
-        //Create the thread
-        pthread_t* NewTh = (pthread_t*)malloc(sizeof(pthread_t));
-        pthread_create(NewTh, NULL, &clienthandle, NewCon);
-        printf("Thread CR\n");
-        Threads.push_back(NewTh);
-        printf("Started Thread\n");
+            //Create the thread
+            pthread_t* NewTh = (pthread_t*)malloc(sizeof(pthread_t));
+            pthread_create(NewTh, NULL, &clienthandle, NewCon);
+            
+            printf("Thread CR\n");
+            Threads.push_back(NewTh);
+            printf("Started Thread\n");
 
-        garbageCollector();
+            garbageCollector();
+        }
 
     }
 }
