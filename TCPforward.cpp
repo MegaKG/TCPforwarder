@@ -48,9 +48,12 @@ void* forwarder(void* VIn){
         haveread = read(serv, Buffer, bufsize);
         //printf("%i\n",haveread);
         //printf("RECV\n");
-        if (haveread == 0){
+        if (haveread <= 0){
             break;
         }
+        //else if ((haveread != 0) && (Buffer[0] == 0)){
+        //    break;
+        //}
         else {
             send(clie, Buffer, haveread, 0);
         }
@@ -60,11 +63,11 @@ void* forwarder(void* VIn){
 }
 
 void* clienthandle(void* VIn){
-    //printf("Thread Start\n");
+    printf("-> Thread Start\n");
     struct connection* MyCon = (struct connection*)VIn;
     //Open To Server
     MyCon->ClientCon = openclient(DestIP,DestPort);
-    //printf("Success Opening Client %i\n",MyCon->ID);
+    printf("-> Success Opening Client %i\n",MyCon->ID);
 
     struct args* C2SA = (struct args*)malloc(sizeof(struct args));
     struct args* S2CA = (struct args*)malloc(sizeof(struct args));
@@ -75,19 +78,28 @@ void* clienthandle(void* VIn){
     S2CA->to = MyCon->ClientCon;
     S2CA->from = MyCon->ServerCon;
     S2CA->MyCon = MyCon;
-    //printf("Gen Con Data\n");
+    printf("-> Gen Connection Data\n");
 
     pthread_t* C2S = (pthread_t*)malloc(sizeof(pthread_t));
     pthread_create(C2S, NULL, &forwarder, C2SA);
-    //printf("Start C2S\n");
+    printf("-> Start C2S\n");
 
-    forwarder((void*)S2CA);
-    //printf("Term\n");
+    pthread_t* S2C = (pthread_t*)malloc(sizeof(pthread_t));
+    pthread_create(S2C, NULL, &forwarder, S2CA);
+    printf("-> Start S2C\n");
+
+    while (1){
+        sleep(1);
+        //printf("-> Await\n");
+    }
+    //forwarder(S2CA);
+    printf("-> Term\n");
 
     //Inform the Grim Reaper that we have died
     close(MyCon->ClientCon);
     close(MyCon->ServerCon);
-    //printf("Died\n");
+    printf("-> Died\n");
+    
 }
 
 //The Grim Reaper
@@ -130,9 +142,8 @@ int main(int argc, char** argv){
     bufsize = stosi(argv[5]);
 
     printf("Forwarding %s:%i to %s:%i buffer %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize);
-
+    cserver = openserver(HostIP,HostPort);
     while (true){
-        cserver = openserver(HostIP,HostPort);
         printf("Awaiting Connection\n");
         ccon = accept(cserver);
         printf("Accepted Client %i\n",counter);
