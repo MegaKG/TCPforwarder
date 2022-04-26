@@ -14,10 +14,6 @@ int HostPort = 5000;
 int DestPort = 5000;
 int bufsize = 1024;
 
-void loadConfig(){
-
-}
-
 struct connection {
   int Server;
   int ServerCon;
@@ -91,12 +87,22 @@ void* clienthandle(void* VIn){
         pthread_create(S2C, NULL, &forwarder, S2CA);
         printf("%i -> Start S2C\n",myid);
 
-        while (1){
+        while (MyCon->Status){
             sleep(1);
             //printf("-> Await\n");
         }
+        printf("%i -> Status Changed\n",myid);
+        pthread_cancel(*C2S);
+        pthread_cancel(*S2C);
+
+        //Clean Up the Dangling Pointers
+        free(C2SA);
+        free(S2CA);
+        free(C2S);
+        free(S2C);
+
         //forwarder(S2CA);
-        printf("%i -> Terminate\n",myid);
+        printf("%i -> Terminated\n",myid);
     }
     else {
         printf("%i -> Connection Failure\n",myid);
@@ -105,6 +111,8 @@ void* clienthandle(void* VIn){
     //Inform the Grim Reaper that we have died
     close(MyCon->ClientCon);
     close(MyCon->ServerCon);
+
+    
     printf("%i -> Died\n",myid);
     
 }
@@ -122,10 +130,14 @@ void garbageCollector(){
 
     for (int i = ToDel.size() - 1; i > -1 ; i--){
         //Cleanup Code Here
+        printf("Kill Client Thread %i\n",ToDel[i]);
+        pthread_cancel(*Threads[ToDel[i]]);
 
-        //free(Cons[i]);
-        //Threads.erase(Threads.at(iter));
-        //Cons.erase(Cons.at(iter));
+        free(Cons[ToDel[i]]);
+        free(Threads[ToDel[i]]);
+
+        Threads.erase(Threads.begin() + ToDel[i]);
+        Cons.erase(Cons.begin() + ToDel[i]);
 
     }
 
@@ -151,10 +163,13 @@ int main(int argc, char** argv){
     printf("Forwarding %s:%i to %s:%i buffer %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize);
     cserver = openserver(HostIP,HostPort);
     while (true){
+        usleep(1000);
+        printf("Running Objects: %i\n",Threads.size());
         printf("Awaiting Connection\n");
         ccon = accept(cserver);
         if (ccon <= 0){
             printf("Accept Failure\n");
+            sleep(1);
         }
         else {
             printf("Accepted Client %i\n",counter);
