@@ -1,5 +1,5 @@
 #include <iostream>
-#include "TCPstreams.hpp"
+#include "TCPstreams2.hpp"
 #include "StringInputs2.h"
 #include <vector>
 #include <stdio.h>
@@ -69,11 +69,13 @@ void* forwarder(void* VIn){
 void* clienthandle(void* VIn){
     struct connection* MyCon = (struct connection*)VIn;
     int myid = MyCon->ID;
-    printf("%i -> Thread Start\n",myid);
+    //printf("%i -> Thread Start\n",myid);
     
     //Open To Server
-    MyCon->ClientCon = openclient(DestIP,DestPort);
-    if (MyCon->ClientCon > 0){
+    struct TCPConnection* NewCon = openclient(DestIP,DestPort);
+    MyCon->ClientCon = NewCon->fd;
+    free(NewCon);
+    if (MyCon->ClientCon != NULL){
         printf("%i -> Success Opening Client\n",myid);
 
         struct args* C2SA = (struct args*)malloc(sizeof(struct args));
@@ -85,15 +87,15 @@ void* clienthandle(void* VIn){
         S2CA->to = MyCon->ClientCon;
         S2CA->from = MyCon->ServerCon;
         S2CA->MyCon = MyCon;
-        printf("%i -> Gen Connection Data\n",myid);
+        //printf("%i -> Gen Connection Data\n",myid);
 
         pthread_t* C2S = (pthread_t*)malloc(sizeof(pthread_t));
         pthread_create(C2S, NULL, &forwarder, C2SA);
-        printf("%i -> Start C2S\n",myid);
+        //printf("%i -> Start C2S\n",myid);
 
         pthread_t* S2C = (pthread_t*)malloc(sizeof(pthread_t));
         pthread_create(S2C, NULL, &forwarder, S2CA);
-        printf("%i -> Start S2C\n",myid);
+        //printf("%i -> Start S2C\n",myid);
         
         MyCon->C2ST = C2S;
 		MyCon->S2CT = S2C;
@@ -104,7 +106,7 @@ void* clienthandle(void* VIn){
             sleep(1);
             //printf("-> Await\n");
         }
-        printf("%i -> Status Changed\n",myid);
+        //printf("%i -> Status Changed\n",myid);
         
 
         //forwarder(S2CA);
@@ -132,38 +134,38 @@ void garbageCollector(){
 	void* val;
     for (int i = ToDel.size() - 1; i > -1 ; i--){
         //Cleanup Code Here
-        printf("Kill Client Thread %i\n",ToDel[i]);
+        //printf("Kill Client Thread %i\n",ToDel[i]);
         
         //The Children of this Thread First
         
         //Kill the Connections
         close(Cons[ToDel[i]]->ClientCon);
         close(Cons[ToDel[i]]->ServerCon);
-        printf("Closed Connections %i\n",ToDel[i]);
+        //printf("Closed Connections %i\n",ToDel[i]);
         
         //Now Terminate the Threads
         pthread_cancel(*Cons[ToDel[i]]->C2ST);
         pthread_cancel(*Cons[ToDel[i]]->S2CT);
-        printf("Cancelled Child Threads %i\n",ToDel[i]);
+        //printf("Cancelled Child Threads %i\n",ToDel[i]);
         
         //Await the result
         pthread_join(*Cons[ToDel[i]]->C2ST,&val);
         pthread_join(*Cons[ToDel[i]]->S2CT,&val);
-        printf("Joined Child Threads %i\n",ToDel[i]);
+        //printf("Joined Child Threads %i\n",ToDel[i]);
 
         //Clean Up the Dangling Pointers
         free(Cons[ToDel[i]]->C2SA);
         free(Cons[ToDel[i]]->S2CA);
         free(Cons[ToDel[i]]->C2ST);
         free(Cons[ToDel[i]]->S2CT);
-        printf("Freed Child Pointers %i\n",ToDel[i]);
+        //printf("Freed Child Pointers %i\n",ToDel[i]);
         
         
         //The Main Thread Stuff
         pthread_cancel(*Threads[ToDel[i]]);
-        printf("Cancelled %i\n",ToDel[i]);
+        //printf("Cancelled %i\n",ToDel[i]);
         pthread_join(*Threads[ToDel[i]],&val);
-        printf("Joined %i\n",ToDel[i]);
+        //printf("Joined %i\n",ToDel[i]);
 
         free(Cons[ToDel[i]]);
         free(Threads[ToDel[i]]);
@@ -178,8 +180,8 @@ void garbageCollector(){
 }
 
 int main(int argc, char** argv){
-    int cserver;
-    int ccon;
+    struct ServerSocketData* cserver;
+    struct TCPConnection* ccon;
     int counter = 0;
 
     if (argc < 6){
@@ -201,34 +203,38 @@ int main(int argc, char** argv){
         printf("Running Objects: %i\n",Threads.size());
         printf("Awaiting Connection\n");
         ccon = accept(cserver);
-        if (ccon <= 0){
+        if (ccon == NULL){
             printf("Accept Failure\n");
             sleep(1);
         }
         else {
-            printf("Accepted Client %i\n",counter);
+            //Accept a Client
+            printf("IP Connected %s id %i\n",inet_ntoa(ccon->address.sin_addr),counter);
             
 
             //Create Connection info
             struct connection* NewCon = (struct connection*)malloc(sizeof(struct connection));
-            NewCon->Server = cserver;
-            NewCon->ServerCon = ccon;
+            NewCon->Server = cserver->fd;
+            NewCon->ServerCon = ccon->fd;
             NewCon->Status = 1;
             NewCon->ClientCon = 0;
             NewCon->ID = counter;
             Cons.push_back(NewCon);
-            printf("Made Connection\n");
-            counter += 1;
+            //printf("Made Connection\n");
+            
 
             //Create the thread
             pthread_t* NewTh = (pthread_t*)malloc(sizeof(pthread_t));
             pthread_create(NewTh, NULL, &clienthandle, NewCon);
             
-            printf("Thread CR\n");
+            //printf("Thread CR\n");
             Threads.push_back(NewTh);
-            printf("Started Thread\n");
+            printf("Started Thread for %i\n",counter);
+            
+            free(ccon);
 
             garbageCollector();
+            counter += 1;
         }
 
     }
