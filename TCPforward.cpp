@@ -14,18 +14,26 @@ int HostPort = 5000;
 int DestPort = 5000;
 int bufsize = 1024;
 
+
+
+struct args {
+  int to;
+  int from;
+  struct connection* MyCon;
+};
+
 struct connection {
   int Server;
   int ServerCon;
   int ClientCon;
   int Status;  
   int ID;
-};
-
-struct args {
-  int to;
-  int from;
-  struct connection* MyCon;
+  
+  //These Exist only to be cleared
+  pthread_t* C2ST;
+  pthread_t* S2CT;
+  struct args* C2SA;
+  struct args* S2CA;
 };
 
 vector <connection*> Cons;
@@ -86,31 +94,25 @@ void* clienthandle(void* VIn){
         pthread_t* S2C = (pthread_t*)malloc(sizeof(pthread_t));
         pthread_create(S2C, NULL, &forwarder, S2CA);
         printf("%i -> Start S2C\n",myid);
+        
+        MyCon->C2ST = C2S;
+		MyCon->S2CT = S2C;
+		MyCon->C2SA = C2SA;
+		MyCon->S2CA = S2CA;
 
         while (MyCon->Status){
             sleep(1);
             //printf("-> Await\n");
         }
         printf("%i -> Status Changed\n",myid);
-        pthread_cancel(*C2S);
-        pthread_cancel(*S2C);
-
-        //Clean Up the Dangling Pointers
-        free(C2SA);
-        free(S2CA);
-        free(C2S);
-        free(S2C);
+        
 
         //forwarder(S2CA);
-        printf("%i -> Terminated\n",myid);
+        printf("%i -> Reached Termination\n",myid);
     }
     else {
         printf("%i -> Connection Failure\n",myid);
     }
-
-    //Inform the Grim Reaper that we have died
-    close(MyCon->ClientCon);
-    close(MyCon->ServerCon);
 
     
     printf("%i -> Died\n",myid);
@@ -127,17 +129,49 @@ void garbageCollector(){
         }
     }
 
-
+	void* val;
     for (int i = ToDel.size() - 1; i > -1 ; i--){
         //Cleanup Code Here
         printf("Kill Client Thread %i\n",ToDel[i]);
+        
+        //The Children of this Thread First
+        
+        //Kill the Connections
+        close(Cons[ToDel[i]]->ClientCon);
+        close(Cons[ToDel[i]]->ServerCon);
+        printf("Closed Connections %i\n",ToDel[i]);
+        
+        //Now Terminate the Threads
+        pthread_cancel(*Cons[ToDel[i]]->C2ST);
+        pthread_cancel(*Cons[ToDel[i]]->S2CT);
+        printf("Cancelled Child Threads %i\n",ToDel[i]);
+        
+        //Await the result
+        pthread_join(*Cons[ToDel[i]]->C2ST,&val);
+        pthread_join(*Cons[ToDel[i]]->S2CT,&val);
+        printf("Joined Child Threads %i\n",ToDel[i]);
+
+        //Clean Up the Dangling Pointers
+        free(Cons[ToDel[i]]->C2SA);
+        free(Cons[ToDel[i]]->S2CA);
+        free(Cons[ToDel[i]]->C2ST);
+        free(Cons[ToDel[i]]->S2CT);
+        printf("Freed Child Pointers %i\n",ToDel[i]);
+        
+        
+        //The Main Thread Stuff
         pthread_cancel(*Threads[ToDel[i]]);
+        printf("Cancelled %i\n",ToDel[i]);
+        pthread_join(*Threads[ToDel[i]],&val);
+        printf("Joined %i\n",ToDel[i]);
 
         free(Cons[ToDel[i]]);
         free(Threads[ToDel[i]]);
 
         Threads.erase(Threads.begin() + ToDel[i]);
         Cons.erase(Cons.begin() + ToDel[i]);
+        
+        
 
     }
 
