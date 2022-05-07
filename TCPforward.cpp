@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <signal.h>
 using namespace std;
 
 //Filler Initial Values, to be initialised
@@ -13,7 +14,6 @@ string DestIP = "127.0.0.1";
 int HostPort = 5000;
 int DestPort = 5000;
 int bufsize = 1024;
-
 
 
 struct args {
@@ -40,6 +40,7 @@ vector <connection*> Cons;
 vector <pthread_t*> Threads;
 
 void* forwarder(void* VIn){
+    signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can fix these properly
     struct args* In = (struct args*)VIn;
     int serv = In->from;
     int clie = In->to;
@@ -67,6 +68,7 @@ void* forwarder(void* VIn){
 }
 
 void* clienthandle(void* VIn){
+    signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can fix these properly
     struct connection* MyCon = (struct connection*)VIn;
     int myid = MyCon->ID;
     //printf("%i -> Thread Start\n",myid);
@@ -123,6 +125,7 @@ void* clienthandle(void* VIn){
 
 //The Grim Reaper
 void garbageCollector(){
+    signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can fix these properly
     vector<int> ToDel;
 
     for (int i = 0; i < Cons.size(); i++){
@@ -180,6 +183,7 @@ void garbageCollector(){
 }
 
 int main(int argc, char** argv){
+    signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can fix these properly
     struct ServerSocketData* cserver;
     struct TCPConnection* ccon;
     int counter = 0;
