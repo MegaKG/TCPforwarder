@@ -68,13 +68,14 @@ void* clienthandle(void* VIn){
     
     //Open To Server
     struct TCPConnection* NewCon = openclient(DestIP,DestPort);
-    //Extract FD
-    MyCon->ClientCon = NewCon->fd;
-    //Here we deallocate the connection struct pointer as we have already extracted the file descriptor
-    free(NewCon);
 
     //Check for Bad Connection
-    if (MyCon->ClientCon != NULL){
+    if (NewCon != NULL){
+        //Extract FD
+        MyCon->ClientCon = NewCon->fd;
+        //Here we deallocate the connection struct pointer as we have already extracted the file descriptor
+        free(NewCon);
+        
         printf("%i -> Success Opening Client\n",myid);
 
         //Here we Set up the arguments for the client to server and server to client threads
@@ -109,6 +110,8 @@ void* clienthandle(void* VIn){
     }
     else {
         printf("%i -> Connection Failure\n",myid);
+        //Here we deallocate the connection struct pointer as we have already extracted the file descriptor
+        free(NewCon);
     }
 
     
