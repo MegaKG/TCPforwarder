@@ -5,8 +5,14 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <cstdlib>
 #include <signal.h>
+#include "LoadConfig2.h"
+
 using namespace std;
+
+
+
 
 //Filler Initial Values, to be initialised
 string HostIP = "127.0.0.1";
@@ -173,24 +179,150 @@ void garbageCollector(){
 
 }
 
+//Prints the Help Text
+void printHelp(char** argv){
+    printf("Usage:\n%s\n",argv[0]);
+    printf("\t-h\t: This Help Menu\n");
+    printf("\t-c\t: Configuration File, Specified by -c FilePath. EG: -c Example.conf\n");
+    printf("\t-host\t: The IP Address to host the TCP server on. Usually 0.0.0.0 (Optional)\n");
+    printf("\t-dest\t: The IP Address Of the destination.\n");
+    printf("\t-hport\t: The Hosting Port\n");
+    printf("\t-dport\t: The Destination Port\n");
+    printf("\t-buf\t: The Buffer size, usually 1024 (Optional)\n");
+
+}
+
+
+
+//Required Configuration Values
+const int confValues = 3;
+
+//For the File
+const char* ConfTags[3] {
+    "Client_address",
+    "Client_port",
+    "Host_port",
+
+};
+
+//For the Cmdline Arguments
+const char* ArgTags[3]{
+    "-dest",
+    "-hport",
+    "-dport",
+};
+
+//This function loads the Configuration
+int loadSettings(int argc, char** argv){
+    struct configData* MyArgs = readArgs(argc,argv);
+    //printf("Got the Following Arguments:\n");
+    //printConfig(MyArgs);
+    if (getConfValue("-c",MyArgs) != NULL){
+        char* CF_Name = getConfValue("-c",MyArgs);
+        printf("Config File Specified, %s\n",CF_Name);
+
+        //DeAllocate Args
+        destroyArgsConfig(MyArgs);
+
+        //Load the Config into the same struct pointer
+        MyArgs = readConfig(CF_Name);
+
+        //Check Flags
+        for (int i = 0; i < confValues; i++){
+            //printf("Loading %s\n",ConfTags[i]);
+            if (getConfValue(ConfTags[i],MyArgs) == NULL){
+                printf("%s is not defined\n",ConfTags[i]);
+                destroyConfig(MyArgs);
+                return -1;
+            }
+        }
+
+        //Assign Values
+        DestIP.assign(getConfValue("Client_address",MyArgs));
+        HostPort = stosi(getConfValue("Host_port",MyArgs));
+        DestPort = stosi(getConfValue("Client_port",MyArgs));
+        
+
+       
+        //Optional Arguments
+        if (getConfValue("Host_address",MyArgs) != NULL){
+            HostIP.assign(getConfValue("Host_address",MyArgs));
+        }
+
+        if (getConfValue("Buffer_size",MyArgs) != NULL){
+            bufsize = stosi(getConfValue("Buffer_size",MyArgs));
+        }
+
+        
+        destroyConfig(MyArgs);
+
+        return 1;
+
+    }
+
+    //Help Command Specified
+    else if (getConfValue("-h",MyArgs) != NULL){
+        destroyArgsConfig(MyArgs);
+        return -2;
+    }
+    
+    
+    //Loads CMDline Arguments
+    else {
+        //Check Flags
+        for (int i = 0; i < confValues; i++){
+            //printf("Loading %s\n",ArgTags[i]);
+            if (getConfValue(ArgTags[i],MyArgs) == NULL){
+                printf("%s Required Argument not Provided!\n",ArgTags[i]);
+                destroyArgsConfig(MyArgs);
+                return -1;
+            }
+        }
+
+
+        //Assign Arguments            
+        DestIP.assign(getConfValue("-dest",MyArgs));
+        HostPort = stosi(getConfValue("-hport",MyArgs));
+        DestPort = stosi(getConfValue("-dport",MyArgs));
+
+
+        //Optional Arguments
+        if (getConfValue("-host",MyArgs) != NULL){
+            HostIP.assign(getConfValue("-host",MyArgs));
+        }
+
+        if (getConfValue("-buf",MyArgs) != NULL){
+            bufsize = stosi(getConfValue("-buf",MyArgs));
+        }
+
+        destroyArgsConfig(MyArgs);
+
+        return 0;
+
+    }
+
+
+    
+}
+
 int main(int argc, char** argv){
     signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can fix these properly
     struct ServerSocketData* cserver;
     struct TCPConnection* ccon;
     int counter = 0;
 
-    if (argc < 6){
-        printf("Usage:\n%s <IP HOST> <PORT HOST> <IP TARGET> <PORT TARGET> <BUFFER SIZE>\nEG: %s 0.0.0.0 5000 192.168.1.4 3000 1024\n", argv[0], argv[0]);
-        printf("This would host on 0.0.0.0:5000 and forward to 192.168.1.4:3000 with buffer of 1024\n");
+    if (argc == 1){
+        printHelp(argv);
         return -1; 
     }
+
+    int loadResult = loadSettings(argc,argv);
+    if (loadResult < 0){
+        printHelp(argv);
+        return -1;
+    }
+
     
-    //Loads CMDline Arguments
-    HostIP.assign(argv[1]);
-    DestIP.assign(argv[3]);
-    HostPort = stosi(argv[2]);
-    DestPort = stosi(argv[4]);
-    bufsize = stosi(argv[5]);
 
     printf("Forwarding %s:%i to %s:%i buffer %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize);
     cserver = openserver(HostIP,HostPort);
