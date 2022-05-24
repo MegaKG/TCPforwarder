@@ -1,3 +1,12 @@
 CC=g++
+SRC=src
+BUILD=build
+
 all:
-	$(CC) TCPforward.cpp -pthread -o TCPforward
+	mkdir $(BUILD)
+	$(CC) $(SRC)/TCPforward.cpp -pthread -o $(BUILD)/TCPforward
+	mv -v $(BUILD)/TCPforward ./
+
+clean:
+	rm -rvf $(BUILD)
+	rm -vf TCPforward
