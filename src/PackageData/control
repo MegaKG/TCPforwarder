@@ -1,0 +1,13 @@
+Package: TCPforward
+Version: 4.0-0
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: MegaKG <megakg@outlook.com>
+Homepage: https://github.com/MegaKG/TCPforwarder
+Description: TCP Forwarder:
+ This small program acts as a very basic proxy
+ For TCP connections.
+ It creates a host socket, accepts clients
+ and forwards all traffic between it and the 
+ target machine.
