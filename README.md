@@ -1,9 +1,7 @@
 # TCPforwarder
 Proxies TCP connections (C++ Edition)
 
-Work In Progress.
-
-This application (Prototyped in python3) proxies TCP connections.
+This application proxies TCP connections.
 
 It works as follows:
 - Accept a connection
