@@ -20,6 +20,7 @@ string DestIP = "127.0.0.1";
 int HostPort = 5000;
 int DestPort = 5000;
 int bufsize = 1024;
+int ConLimit = 0;
 
 
 struct args {
@@ -189,7 +190,7 @@ void printHelp(char** argv){
     printf("\t-hport\t: The Hosting Port\n");
     printf("\t-dport\t: The Destination Port\n");
     printf("\t-buf\t: The Buffer size, usually 1024 (Optional)\n");
-
+	printf("\t-climit\t: The Connection Limit, Set to 0 for unlimited. Default is 0 (Optional)\n");
 }
 
 
@@ -252,6 +253,9 @@ int loadSettings(int argc, char** argv){
         if (getConfValue("Buffer_size",MyArgs) != NULL){
             bufsize = stosi(getConfValue("Buffer_size",MyArgs));
         }
+        if (getConfValue("Connection_limit",MyArgs) != NULL){
+            ConLimit = stosi(getConfValue("Connection_limit",MyArgs));
+        }
 
         
         destroyConfig(MyArgs);
@@ -294,6 +298,9 @@ int loadSettings(int argc, char** argv){
         if (getConfValue("-buf",MyArgs) != NULL){
             bufsize = stosi(getConfValue("-buf",MyArgs));
         }
+        if (getConfValue("-climit",MyArgs) != NULL){
+            ConLimit = stosi(getConfValue("-climit",MyArgs));
+        }
 
         destroyArgsConfig(MyArgs);
 
@@ -324,9 +331,20 @@ int main(int argc, char** argv){
 
     
 
-    printf("Forwarding %s:%i to %s:%i buffer %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize);
+    printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize,ConLimit);
     cserver = openserver(HostIP,HostPort);
     while (true){
+		
+		if ((Cons.size() > ConLimit) && (ConLimit != 0)){
+			printf("Exceeded Connection Limit, waiting...\n");
+			while (Cons.size() > ConLimit){
+				sleep(1);
+				garbageCollector();
+			}
+			printf("Space Free, Proceeding\n");
+		}
+		
+		
         //usleep(1000);
         printf("Running Objects: %i\n",Threads.size());
         printf("Awaiting Connection\n");
