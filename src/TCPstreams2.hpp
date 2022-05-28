@@ -86,29 +86,23 @@ struct TCPConnection* accept(struct ServerSocketData* server){
 
 void senddat(struct TCPConnection* socketin, char* MSG){
     send(socketin->fd, MSG, strlen(MSG), 0);
-
 }
 
-string getdat(struct TCPConnection* socketin, int buffer = 1024){
+char* getdat(struct TCPConnection* socketin, int buffer = 1024){
     char indat[buffer+1];
-    string outstring;
-
-    //Wipe buffer
-    for (int i = 0; i < buffer+1; i++){
-        indat[i] = 0;
-    }
+    memset(indat,0,buffer+1);
 
     //Now Read
     int result = read(socketin->fd, indat, buffer);
 
-    //Write to Output string
-    //for (int i = 0; i < buffer; i++){
-    //    outstring.append(indat[i]);
-    //}
-    outstring.append(indat);
+    if (result == 0){
+        return NULL;
+    }
 
-    return outstring;
+    char* out = (char*)malloc(sizeof(char) * (result+1));
+    strcpy(out,indat);
 
+    return out;
 
 }
 
