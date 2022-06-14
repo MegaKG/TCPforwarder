@@ -1,0 +1,14 @@
+Configuration should follow the following Conventions:
+- Capital letter on first word
+- Words Seperated by Underscores
+- All following words lower case
+- There must be no trailing comments on lines EG:
+Do this:
+#Some comment
+My_config = hello
+
+Not This:
+My_config = hello #Some comment
+
+- All lines must be terminated with a newline character
+- A trailing newline (empty line) must exist at the end of the file

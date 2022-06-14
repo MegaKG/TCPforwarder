@@ -1,0 +1,123 @@
+TCPstreams2.hpp
+- TCP Socket Handler
+- Wraps the creation, transfer of data and termination of sockets
+
+Provides the Following Data Types:
+
+These are identical in contents, their name only differs to differentiate their usage.
+
+This holds the main server socket that accepts TCP connections
+struct ServerSocketData {
+	struct sockaddr_in address;
+	int fd;
+};
+
+This holds the information for connected clients.
+struct TCPConnection {
+	struct sockaddr_in address;
+	int fd;
+};
+
+Functions:
+
+Opens a server socket, allocating a ServerSocketData struct:
+struct ServerSocketData* openserver(string IP, int port)
+
+Accepts a client
+struct TCPConnection* accept(struct ServerSocketData* server)
+
+Sends a C_String
+void senddat(struct TCPConnection* socketin, char* MSG)
+
+Gets a C_String into an allocated buffer
+char* getdat(struct TCPConnection* socketin, int buffer = 1024)
+
+Opens a client connection
+struct TCPConnection* openclient(string IP, int port)
+
+
+
+LoadConfig2.h
+- Config loader for both file and commandline argument inputs
+- Loads values into a standardised linked list
+
+
+Provides the Following Data Types:
+
+Data node
+struct data {
+	char* Key;
+	char* Value;
+};
+
+Linked List Node
+struct configData {
+	struct configData* Next;
+	struct data MyData;
+};
+
+Functions:
+
+Read from File
+struct configData* readConfig(char* Filename)
+
+Read from Commandline Arguments
+struct configData* readArgs(int argc, char** argv)
+
+Print the config in a human readable format (DEBUG)
+void printConfig(struct configData* Config)
+
+Get a Value from the Config by Key
+char* getConfValue(const char* Key,struct configData* Config)
+
+Cleans up memory when config is no longer needed for only for file config
+void destroyConfig(struct configData* Config)
+
+Cleans up memory when config is no longer needed for only for commandline arguments config
+This is because const pointers cannot be freed.
+void destroyArgsConfig(struct configData* Config)
+
+
+StringInputs2.h
+- Decodes C_Strings into various integer and floating point types.
+- Every Function Accepts a char* pointer and outputs the required integer / float data type
+- Supports fixed width integers
+- Function names are applied as follows: String to Unsigned Integer = stoui()
+
+
+UNIXstreams.hpp
+- UNIX Socket Handler
+- Wraps the creation, transfer of data and termination of sockets
+
+Provides the Following Data Types:
+
+These are identical in contents, their name only differs to differentiate their usage.
+
+This holds the main server socket that accepts UNIX connections
+struct UnixServerSocketData {
+	struct sockaddr_un address;
+	int fd;
+};
+
+Client and Connected Sockets:
+struct UNIXConnection {
+	struct sockaddr_un address;
+	int fd;
+};
+
+Functions:
+
+Opens a server socket, allocating a UnixServerSocketData struct:
+struct UnixServerSocketData* UNIXopenserver(char* Path)
+
+Accepts a client
+struct UNIXConnection* UNIXaccept(struct UnixServerSocketData* server)
+
+Sends a C_String
+void UNIXsenddat(struct UNIXConnection* socketin, char* MSG)
+
+Gets a C_String into an allocated buffer
+char* UNIXgetdat(struct UNIXConnection* socketin, int buffer = 1024)
+
+Opens a client connection
+struct UNIXConnection* UNIXopenclient(char* Path)

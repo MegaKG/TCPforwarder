@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <signal.h>
 #include "LoadConfig2.h"
+#include "UNIXstreams.hpp"
+#include <math.h>
 
 using namespace std;
 
@@ -22,13 +24,25 @@ int DestPort = 5000;
 int bufsize = 1024;
 int ConLimit = 0;
 
+int ControlSocket = 0;
+string ControlSocketPath = "./socket";
+int RUN = 1;
 
+
+//These arguments are fed into the forwarder thread for Client to Server or Server to Client
 struct args {
   int to;
   int from;
   struct connection* MyCon;
 };
 
+//These arguments are fed to the main connection handler / acceptor
+struct handlerArgs {
+	int argc;
+	char** argv;
+};
+
+//These arguments are sent to the main client handler
 struct connection {
   int Server;
   int ServerCon;
@@ -43,9 +57,12 @@ struct connection {
   struct args* S2CA;
 };
 
+//Stores all Active connections and their respective threads
 vector <connection*> Cons;
 vector <pthread_t*> Threads;
 
+
+//Universal forwarder for Client to Server and Server to Client
 void* forwarder(void* VIn){
     signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can detect and fix these properly
     struct args* In = (struct args*)VIn;
@@ -191,6 +208,7 @@ void printHelp(char** argv){
     printf("\t-dport\t: The Destination Port\n");
     printf("\t-buf\t: The Buffer size, usually 1024 (Optional)\n");
 	printf("\t-climit\t: The Connection Limit, Set to 0 for unlimited. Default is 0 (Optional)\n");
+	printf("\t-control\t: The Control Unix Socket (Optional)\n");
 }
 
 
@@ -256,6 +274,10 @@ int loadSettings(int argc, char** argv){
         if (getConfValue("Connection_limit",MyArgs) != NULL){
             ConLimit = stosi(getConfValue("Connection_limit",MyArgs));
         }
+        if (getConfValue("Control_socket",MyArgs) != NULL){
+            ControlSocketPath.assign(getConfValue("Control_socket",MyArgs));
+            ControlSocket = 1;
+        }
 
         
         destroyConfig(MyArgs);
@@ -301,6 +323,10 @@ int loadSettings(int argc, char** argv){
         if (getConfValue("-climit",MyArgs) != NULL){
             ConLimit = stosi(getConfValue("-climit",MyArgs));
         }
+        if (getConfValue("-control",MyArgs) != NULL){
+            ControlSocketPath.assign(getConfValue("-control",MyArgs));
+            ControlSocket = 1;
+        }
 
         destroyArgsConfig(MyArgs);
 
@@ -312,29 +338,30 @@ int loadSettings(int argc, char** argv){
     
 }
 
-int main(int argc, char** argv){
-    signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can fix these properly
+
+//This is the main server socket for 
+void* mainHandler(void* InArgs){
+	signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can fix these properly
+	
+	//Load Input Arguments
+	struct handlerArgs* MyArgs = (struct handlerArgs*)InArgs;
+	int argc = MyArgs->argc;
+	char** argv = MyArgs->argv;
+	
+    
     struct ServerSocketData* cserver;
     struct TCPConnection* ccon;
     int counter = 0;
 
-    if (argc == 1){
-        printHelp(argv);
-        return -1; 
-    }
 
-    int loadResult = loadSettings(argc,argv);
-    if (loadResult < 0){
-        printHelp(argv);
-        return -1;
-    }
-
-    
-
+	//Open the Server
     printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize,ConLimit);
     cserver = openserver(HostIP,HostPort);
-    while (true){
-		
+    
+    
+    //Handler main loop
+    while (RUN){
+		//Check if we have exceeded maximum connection limit (if enabled)
 		if ((Cons.size() > ConLimit) && (ConLimit != 0)){
 			printf("Exceeded Connection Limit, waiting...\n");
 			while (Cons.size() > ConLimit){
@@ -344,11 +371,12 @@ int main(int argc, char** argv){
 			printf("Space Free, Proceeding\n");
 		}
 		
-		
-        //usleep(1000);
+		//Accept a Connection
         printf("Running Objects: %i\n",Threads.size());
         printf("Awaiting Connection\n");
         ccon = accept(cserver);
+        
+        //Check if it succeeded
         if (ccon == NULL){
             printf("Accept Failure\n");
             sleep(1);
@@ -383,4 +411,162 @@ int main(int argc, char** argv){
         }
 
     }
+}
+
+
+void controlServer(){
+    struct UnixServerSocketData* ControlServer = UNIXopenserver((char*)ControlSocketPath.c_str());
+    struct UNIXConnection* ControlConnection = NULL;
+
+    //Strings are malloced to this, they must be cleared when not needed
+    char* MSG_BUF;
+    
+    while (RUN){
+        ControlConnection = UNIXaccept(ControlServer);
+        while (1){
+            MSG_BUF = UNIXgetdat(ControlConnection,1);
+            //Kill Connection
+            if (MSG_BUF[0] == '\x00'){
+                printf("Control Socket Disconnect\n");
+                UNIXsenddat(ControlConnection,"Exit Connection");
+                break;
+            }
+            //Update Dest IP
+            else if (MSG_BUF[0] == '\x01'){
+                printf("Updating Destination IP\n");
+                UNIXsenddat(ControlConnection,"Enter IP");
+                free(MSG_BUF);
+                MSG_BUF = NULL;
+                MSG_BUF = UNIXgetdat(ControlConnection,12);
+                printf("Changing to IP %s\n",MSG_BUF);
+                DestIP.assign(MSG_BUF);
+                UNIXsenddat(ControlConnection,"IP Updated");
+            }
+            //Update Dest Port
+            else if (MSG_BUF[0] == '\x02'){
+                printf("Updating Destination Port\n");
+                UNIXsenddat(ControlConnection,"Enter Port");
+                free(MSG_BUF);
+                MSG_BUF = NULL;
+                MSG_BUF = UNIXgetdat(ControlConnection,6);
+                printf("Changing to Port %s\n",MSG_BUF);
+                DestPort = stosi(MSG_BUF);
+                UNIXsenddat(ControlConnection,"Port Updated");
+            }
+            //Kill Server
+            else if (MSG_BUF[0] == '\x03'){
+                printf("Control Socket Request Terminate\n");
+                RUN = 0;
+                UNIXsenddat(ControlConnection,"Server Terminated");
+            }
+            //List Connections By Index
+            else if (MSG_BUF[0] == '\x04'){
+                printf("Listing Active Connections\n");
+                free(MSG_BUF);
+
+                //First Send the Total Count
+                //Reuse MSG_BUF, building a string with the total count via sprintf
+                printf("Int Size is %i\n",(((int)ceil(log10(Cons.size() + 1)))+ 1));
+                MSG_BUF = (char*)malloc(sizeof(char) * (((int)ceil(log10(Cons.size() + 1)))+ 1));
+                memset(MSG_BUF,0,(((int)ceil(log10(Cons.size() + 1)))+ 1));
+                sprintf(MSG_BUF,"%s",Cons.size());
+                UNIXsenddat(ControlConnection,MSG_BUF);
+                free(MSG_BUF);
+
+                //Await Response
+                MSG_BUF = UNIXgetdat(ControlConnection,1);
+                free(MSG_BUF);
+
+                //Now Send all the Connections
+                for (int i = 0; i < Cons.size(); i++){
+                    //[TODO]:  Send the IP address
+                    UNIXsenddat(ControlConnection,"CONNECTION");
+
+                    //Await a response
+                    MSG_BUF = UNIXgetdat(ControlConnection,1);
+                    free(MSG_BUF);
+                }
+
+            }
+
+            //Kill Connection By Index
+            else if (MSG_BUF[0] == '\x05'){
+                printf("Terminating a Connection\n");
+                free(MSG_BUF);
+
+                //[TODO]: Allow killing by index
+                
+            }
+            
+            if (MSG_BUF != NULL){
+                free(MSG_BUF);
+                MSG_BUF = NULL;
+            }
+            
+        }
+        printf("Terminate Control Loop\n");
+        close(ControlConnection->fd);
+        if (MSG_BUF != NULL){
+                free(MSG_BUF);
+                MSG_BUF = NULL;
+        }
+        
+        
+    }
+
+}
+
+
+int main(int argc, char** argv){
+	printf("Start Forwarder\n");
+	
+	
+	//Load Configuration
+	if (argc == 1){
+        printHelp(argv);
+        return -1; 
+    }
+
+    int loadResult = loadSettings(argc,argv);
+    if (loadResult < 0){
+        printHelp(argv);
+        return -1;
+    }
+    
+    printf("Loaded Configuration\n");
+    
+    
+	//Start the Main Connection handler thread
+	void* retval;
+	struct handlerArgs* MainArgs = (struct handlerArgs*)malloc(sizeof(struct handlerArgs));
+	MainArgs->argc = argc;
+	MainArgs->argv = argv;
+	pthread_t* MainTh = (pthread_t*)malloc(sizeof(pthread_t));
+	pthread_create(MainTh, NULL, &mainHandler, MainArgs);
+	printf("Started main handler\n");
+	
+	
+	//No Control Socket Mode
+	if (ControlSocket == 0){
+		printf("Running Without Control Socket\n");
+		while (RUN){
+			sleep(1);
+		}
+	}
+	//Control Socket Mode
+	else {
+		printf("Control Socket Enabled\n");
+        controlServer();
+		
+	}
+	
+	
+	//Cleanup
+	printf("Cleaning Up...\n");
+	RUN = 0;
+    pthread_cancel(*MainTh);
+    pthread_join(*MainTh,&retval);
+	free(MainArgs);
+	free(MainTh);
+	printf("Reached Program Terminate\n");
 }

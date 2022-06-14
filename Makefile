@@ -5,7 +5,7 @@ VERSION=4.0-0
 
 bin:
 	mkdir $(BUILD)
-	$(CC) $(SRC)/TCPforward.cpp -pthread -o $(BUILD)/TCPforward
+	$(CC) $(SRC)/TCPforward.cpp -pthread -lm -o $(BUILD)/TCPforward
 	mv -v $(BUILD)/TCPforward ./
 
 clean:
