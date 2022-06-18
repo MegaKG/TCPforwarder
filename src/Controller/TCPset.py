@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import UNIXstreams4 as unx
 import sys
+import time
 
 def main(SocketPath):
     print("TCP Forward Control V1.0")
@@ -16,10 +17,11 @@ def main(SocketPath):
             exit - disconnect
             setip - sets the target ip
             setport - sets the target port
+            listcon - lists connections by index
             kill - kills the server
             """)
         elif COMMAND == 'exit':
-            CON.senddat(b'\x04')
+            CON.senddat(b'\x00')
             print(CON.getstdat())
             break
 
@@ -39,6 +41,21 @@ def main(SocketPath):
             print(CON.getstdat())
             CON.sendstdat(input('PORT: ') + '\x00')
             print(CON.getstdat())
+
+        elif COMMAND == 'listcon':
+            CON.senddat(b'\x04')
+            Result = CON.getstdat()
+            time.sleep(0.1)
+            CON.senddat(b'OK')
+            
+            print(Result,"Connections Currently Open")
+            
+            for i in range(int(Result)):
+                print(i,"Address:",CON.getstdat())
+                time.sleep(0.1)
+                CON.senddat(b'OK')
+
+                
 
     CON.close()
 

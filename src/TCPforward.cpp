@@ -469,23 +469,37 @@ void controlServer(){
                 printf("Int Size is %i\n",(((int)ceil(log10(Cons.size() + 1)))+ 1));
                 MSG_BUF = (char*)malloc(sizeof(char) * (((int)ceil(log10(Cons.size() + 1)))+ 1));
                 memset(MSG_BUF,0,(((int)ceil(log10(Cons.size() + 1)))+ 1));
-                sprintf(MSG_BUF,"%s",Cons.size());
+                printf("Malloc\n");
+                
+                sprintf(MSG_BUF,"%i",Cons.size());
+                printf("sprintf\n");
+                
                 UNIXsenddat(ControlConnection,MSG_BUF);
                 free(MSG_BUF);
+                printf("Sent Size\n");
 
                 //Await Response
                 MSG_BUF = UNIXgetdat(ControlConnection,1);
                 free(MSG_BUF);
+                printf("Got Response 1\n");
 
                 //Now Send all the Connections
                 for (int i = 0; i < Cons.size(); i++){
                     //[TODO]:  Send the IP address
                     UNIXsenddat(ControlConnection,"CONNECTION");
+                    printf("Send Connection\n");
 
                     //Await a response
                     MSG_BUF = UNIXgetdat(ControlConnection,1);
-                    free(MSG_BUF);
+                    
+                    //Skip free if it is the last one
+                    if ((i+1) != Cons.size()){
+						free(MSG_BUF);
+					}
+                    
+                    printf("Got Response 2\n");
                 }
+                printf("Done Listing\n");
 
             }
 
@@ -493,8 +507,16 @@ void controlServer(){
             else if (MSG_BUF[0] == '\x05'){
                 printf("Terminating a Connection\n");
                 free(MSG_BUF);
+                
+                UNIXsenddat(ControlConnection,"OK");
 
-                //[TODO]: Allow killing by index
+                MSG_BUF = UNIXgetdat(ControlConnection,1);
+                int tokill = stosi(MSG_BUF);
+                free(MSG_BUF);
+                
+                printf("Killing Connection %i\n",tokill);
+                
+                Cons[tokill]->Status = 0;
                 
             }
             
