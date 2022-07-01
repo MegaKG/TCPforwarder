@@ -24,6 +24,7 @@ int DestPort = 5000;
 int bufsize = 1024;
 int ConLimit = 0;
 
+
 int ControlSocket = 0;
 string ControlSocketPath = "./socket";
 int RUN = 1;
@@ -44,15 +45,29 @@ struct handlerArgs {
 
 //These arguments are sent to the main client handler
 struct connection {
+  //File Descriptors
+  //Main Server Socket
   int Server;
+  //Individual Server Socket
   int ServerCon;
+  //Client Socket
   int ClientCon;
+  
+  //This flag determines if the socket is still open
   int Status;  
+  
+  //Individual ID of the client
   int ID;
   
-  //These Exist only to be cleared
+  //These hold the string representations of 
+  char* ConnectedIP;
+  char* DestinationIP;
+  
+  //The Threads, Client to Server and Server To Client
   pthread_t* C2ST;
   pthread_t* S2CT;
+  
+  //The Arguments for the above Threads
   struct args* C2SA;
   struct args* S2CA;
 };
@@ -91,7 +106,7 @@ void* clienthandle(void* VIn){
     int myid = MyCon->ID;
     
     //Open To Server
-    struct TCPConnection* NewCon = openclient(DestIP,DestPort);
+    struct TCPConnection* NewCon = TCPopenclient(DestIP,DestPort);
 
     //Check for Bad Connection
     if (NewCon != NULL){
@@ -349,14 +364,14 @@ void* mainHandler(void* InArgs){
 	char** argv = MyArgs->argv;
 	
     
-    struct ServerSocketData* cserver;
+    struct TCPServer* cserver;
     struct TCPConnection* ccon;
     int counter = 0;
 
 
 	//Open the Server
     printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize,ConLimit);
-    cserver = openserver(HostIP,HostPort);
+    cserver = TCPopenserver(HostIP,HostPort);
     
     
     //Handler main loop
@@ -374,7 +389,7 @@ void* mainHandler(void* InArgs){
 		//Accept a Connection
         printf("Running Objects: %i\n",Threads.size());
         printf("Awaiting Connection\n");
-        ccon = accept(cserver);
+        ccon = TCPaccept(cserver);
         
         //Check if it succeeded
         if (ccon == NULL){
@@ -415,7 +430,8 @@ void* mainHandler(void* InArgs){
 
 
 void controlServer(){
-    struct UnixServerSocketData* ControlServer = UNIXopenserver((char*)ControlSocketPath.c_str());
+	//Establish a Unix Server
+    struct UNIXServer* ControlServer = UNIXopenserver((char*)ControlSocketPath.c_str());
     struct UNIXConnection* ControlConnection = NULL;
 
     //Strings are malloced to this, they must be cleared when not needed
@@ -423,6 +439,7 @@ void controlServer(){
     
     while (RUN){
         ControlConnection = UNIXaccept(ControlServer);
+        
         while (1){
             MSG_BUF = UNIXgetdat(ControlConnection,1);
             //Kill Connection

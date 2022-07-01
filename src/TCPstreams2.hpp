@@ -11,7 +11,7 @@
 using namespace std;
 
 //The Address Struct
-struct ServerSocketData {
+struct TCPServer {
 	struct sockaddr_in address;
 	int fd;
 };
@@ -22,11 +22,11 @@ struct TCPConnection {
 };
 
 
-struct ServerSocketData* openserver(string IP, int port){
+struct TCPServer* TCPopenserver(string IP, int port){
     int opt = 1;
     int server;
     
-    struct ServerSocketData* MySock = (struct ServerSocketData*)malloc(sizeof(struct ServerSocketData));
+    struct TCPServer* MySock = (struct TCPServer*)malloc(sizeof(struct TCPServer));
     
     if (IP == "0.0.0.0"){
         MySock->address.sin_addr.s_addr = INADDR_ANY;
@@ -70,7 +70,7 @@ struct ServerSocketData* openserver(string IP, int port){
 }
 
 
-struct TCPConnection* accept(struct ServerSocketData* server){
+struct TCPConnection* TCPaccept(struct TCPServer* server){
     int new_socket;
     struct TCPConnection* Con = (struct TCPConnection*)malloc(sizeof(struct TCPConnection));
     
@@ -84,11 +84,11 @@ struct TCPConnection* accept(struct ServerSocketData* server){
     return Con;
 }
 
-void senddat(struct TCPConnection* socketin, char* MSG){
+void TCPsenddat(struct TCPConnection* socketin, char* MSG){
     send(socketin->fd, MSG, strlen(MSG), 0);
 }
 
-char* getdat(struct TCPConnection* socketin, int buffer = 1024){
+char* TCPgetdat(struct TCPConnection* socketin, int buffer = 1024){
     char indat[buffer+1];
     memset(indat,0,buffer+1);
 
@@ -107,7 +107,7 @@ char* getdat(struct TCPConnection* socketin, int buffer = 1024){
 }
 
 
-struct TCPConnection* openclient(string IP, int port){
+struct TCPConnection* TCPopenclient(string IP, int port){
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     struct TCPConnection* Con = (struct TCPConnection*)malloc(sizeof(struct TCPConnection));
 

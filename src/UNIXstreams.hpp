@@ -12,7 +12,7 @@
 using namespace std;
 
 //The Address Struct
-struct UnixServerSocketData {
+struct UNIXServer {
 	struct sockaddr_un address;
 	int fd;
 };
@@ -23,11 +23,11 @@ struct UNIXConnection {
 };
 
 
-struct UnixServerSocketData* UNIXopenserver(char* Path){
+struct UNIXServer* UNIXopenserver(char* Path){
     int opt = 1;
     int server;
     
-    struct UnixServerSocketData* MySock = (struct UnixServerSocketData*)malloc(sizeof(struct UnixServerSocketData));
+    struct UNIXServer* MySock = (struct UNIXServer*)malloc(sizeof(struct UNIXServer));
     
     //Delete any old files
     remove(Path);
@@ -73,7 +73,7 @@ struct UnixServerSocketData* UNIXopenserver(char* Path){
 }
 
 
-struct UNIXConnection* UNIXaccept(struct UnixServerSocketData* server){
+struct UNIXConnection* UNIXaccept(struct UNIXServer* server){
     int new_socket;
     struct UNIXConnection* Con = (struct UNIXConnection*)malloc(sizeof(struct UNIXConnection));
     
