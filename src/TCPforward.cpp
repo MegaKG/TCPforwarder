@@ -199,6 +199,10 @@ void garbageCollector(){
         //The Main Thread Stuff
         pthread_cancel(*Threads[ToDel[i]]);
         pthread_join(*Threads[ToDel[i]],&val);
+        
+        //Kill off the IP String names
+        free(Cons[ToDel[i]]->ConnectedIP);
+        free(Cons[ToDel[i]]->DestinationIP);
 
         //Clean up Dangling Pointers
         free(Cons[ToDel[i]]);
@@ -223,7 +227,7 @@ void printHelp(char** argv){
     printf("\t-dport\t: The Destination Port\n");
     printf("\t-buf\t: The Buffer size, usually 1024 (Optional)\n");
 	printf("\t-climit\t: The Connection Limit, Set to 0 for unlimited. Default is 0 (Optional)\n");
-	printf("\t-control\t: The Control Unix Socket (Optional)\n");
+	printf("\t-control\t: The Control Unix Socket (Optional) [Work in Progress]\n");
 }
 
 
@@ -366,7 +370,10 @@ void* mainHandler(void* InArgs){
     
     struct TCPServer* cserver;
     struct TCPConnection* ccon;
+    char* ConnectedIP;
+    char* DestinationIP;
     int counter = 0;
+    
 
 
 	//Open the Server
@@ -408,6 +415,18 @@ void* mainHandler(void* InArgs){
             NewCon->Status = 1;
             NewCon->ClientCon = 0;
             NewCon->ID = counter;
+            
+            //Add the Text IPs
+            ConnectedIP = (char*)malloc(sizeof(char) * strlen(inet_ntoa(ccon->address.sin_addr)));
+			DestinationIP = (char*)malloc(sizeof(char) * DestIP.length());
+			
+			strcpy(ConnectedIP,inet_ntoa(ccon->address.sin_addr));
+			strcpy(DestinationIP,DestIP.c_str());
+			
+            NewCon->ConnectedIP = ConnectedIP;
+            NewCon->DestinationIP = DestinationIP;
+            
+            //Add to the Connection List
             Cons.push_back(NewCon);
 
             //Create the thread
@@ -502,8 +521,8 @@ void controlServer(){
 
                 //Now Send all the Connections
                 for (int i = 0; i < Cons.size(); i++){
-                    //[TODO]:  Send the IP address
-                    UNIXsenddat(ControlConnection,"CONNECTION");
+                    //Send the IP address
+                    UNIXsenddat(ControlConnection,Cons[i]->ConnectedIP);
                     printf("Send Connection\n");
 
                     //Await a response
@@ -536,23 +555,18 @@ void controlServer(){
                 Cons[tokill]->Status = 0;
                 
             }
-            
             if (MSG_BUF != NULL){
                 free(MSG_BUF);
                 MSG_BUF = NULL;
-            }
-            
+            }   
         }
         printf("Terminate Control Loop\n");
         close(ControlConnection->fd);
         if (MSG_BUF != NULL){
                 free(MSG_BUF);
                 MSG_BUF = NULL;
-        }
-        
-        
+        }   
     }
-
 }
 
 
@@ -596,7 +610,6 @@ int main(int argc, char** argv){
 	else {
 		printf("Control Socket Enabled\n");
         controlServer();
-		
 	}
 	
 	
