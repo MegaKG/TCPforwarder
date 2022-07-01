@@ -7,7 +7,7 @@ Provides the Following Data Types:
 These are identical in contents, their name only differs to differentiate their usage.
 
 This holds the main server socket that accepts TCP connections
-struct ServerSocketData {
+struct TCPServer {
 	struct sockaddr_in address;
 	int fd;
 };
@@ -20,20 +20,20 @@ struct TCPConnection {
 
 Functions:
 
-Opens a server socket, allocating a ServerSocketData struct:
-struct ServerSocketData* openserver(string IP, int port)
+Opens a server socket, allocating a TCPServer struct:
+struct TCPServer* TCPopenserver(string IP, int port)
 
 Accepts a client
-struct TCPConnection* accept(struct ServerSocketData* server)
+struct TCPConnection* TCPaccept(struct TCPServer* server)
 
 Sends a C_String
-void senddat(struct TCPConnection* socketin, char* MSG)
+void TCPsenddat(struct TCPConnection* socketin, char* MSG)
 
 Gets a C_String into an allocated buffer
-char* getdat(struct TCPConnection* socketin, int buffer = 1024)
+char* TCPgetdat(struct TCPConnection* socketin, int buffer = 1024)
 
 Opens a client connection
-struct TCPConnection* openclient(string IP, int port)
+struct TCPConnection* TCPopenclient(string IP, int port)
 
 
 
@@ -108,10 +108,10 @@ struct UNIXConnection {
 Functions:
 
 Opens a server socket, allocating a UnixServerSocketData struct:
-struct UnixServerSocketData* UNIXopenserver(char* Path)
+struct UNIXServer* UNIXopenserver(char* Path)
 
 Accepts a client
-struct UNIXConnection* UNIXaccept(struct UnixServerSocketData* server)
+struct UNIXConnection* UNIXaccept(struct UNIXServer* server)
 
 Sends a C_String
 void UNIXsenddat(struct UNIXConnection* socketin, char* MSG)
