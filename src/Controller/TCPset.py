@@ -18,6 +18,7 @@ def main(SocketPath):
             setip - sets the target ip
             setport - sets the target port
             listcon - lists connections by index
+            killcon - kills a connection by supplied index
             kill - kills the server
             """)
         elif COMMAND == 'exit':
@@ -51,9 +52,23 @@ def main(SocketPath):
             print(Result,"Connections Currently Open")
             
             for i in range(int(Result)):
-                print(i,"Address:",CON.getstdat())
-                time.sleep(0.1)
+                ConnectedIP = CON.getstdat()
                 CON.senddat(b'OK')
+                DestinationIP = CON.getstdat()
+                CON.senddat(b'OK')
+                
+                print(i,"Address:",ConnectedIP,"->",DestinationIP)
+
+        elif COMMAND == 'killcon':
+            CON.senddat(b'\x05')
+            print(CON.getstdat())
+
+            port = input("Index: ")
+            CON.sendstdat(port + '\x00')
+            
+            
+
+            
 
                 
 

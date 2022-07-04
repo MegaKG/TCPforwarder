@@ -473,7 +473,7 @@ void controlServer(){
                 UNIXsenddat(ControlConnection,"Enter IP");
                 free(MSG_BUF);
                 MSG_BUF = NULL;
-                MSG_BUF = UNIXgetdat(ControlConnection,12);
+                MSG_BUF = UNIXgetdat(ControlConnection,13);
                 printf("Changing to IP %s\n",MSG_BUF);
                 DestIP.assign(MSG_BUF);
                 UNIXsenddat(ControlConnection,"IP Updated");
@@ -484,7 +484,7 @@ void controlServer(){
                 UNIXsenddat(ControlConnection,"Enter Port");
                 free(MSG_BUF);
                 MSG_BUF = NULL;
-                MSG_BUF = UNIXgetdat(ControlConnection,6);
+                MSG_BUF = UNIXgetdat(ControlConnection,7);
                 printf("Changing to Port %s\n",MSG_BUF);
                 DestPort = stosi(MSG_BUF);
                 UNIXsenddat(ControlConnection,"Port Updated");
@@ -502,38 +502,45 @@ void controlServer(){
 
                 //First Send the Total Count
                 //Reuse MSG_BUF, building a string with the total count via sprintf
-                printf("Int Size is %i\n",(((int)ceil(log10(Cons.size() + 1)))+ 1));
+                //printf("Int Size is %i\n",(((int)ceil(log10(Cons.size() + 1)))+ 1));
                 MSG_BUF = (char*)malloc(sizeof(char) * (((int)ceil(log10(Cons.size() + 1)))+ 1));
                 memset(MSG_BUF,0,(((int)ceil(log10(Cons.size() + 1)))+ 1));
-                printf("Malloc\n");
+                //printf("Malloc\n");
                 
                 sprintf(MSG_BUF,"%i",Cons.size());
-                printf("sprintf\n");
+                //printf("sprintf\n");
                 
                 UNIXsenddat(ControlConnection,MSG_BUF);
                 free(MSG_BUF);
-                printf("Sent Size\n");
+                //printf("Sent Size\n");
 
-                //Await Response
-                MSG_BUF = UNIXgetdat(ControlConnection,1);
+                //Await Response [2 Characters, usually OK]
+                MSG_BUF = UNIXgetdat(ControlConnection,2);
                 free(MSG_BUF);
-                printf("Got Response 1\n");
+                //printf("Got Response 1\n");
 
                 //Now Send all the Connections
                 for (int i = 0; i < Cons.size(); i++){
                     //Send the IP address
                     UNIXsenddat(ControlConnection,Cons[i]->ConnectedIP);
-                    printf("Send Connection\n");
 
-                    //Await a response
-                    MSG_BUF = UNIXgetdat(ControlConnection,1);
+                    //Await a response [2 Characters, usually OK]
+					MSG_BUF = UNIXgetdat(ControlConnection,2);
+					free(MSG_BUF);
+					
+					//Send the Target IP
+					UNIXsenddat(ControlConnection,Cons[i]->DestinationIP);
+
+                    //Await a response [2 Characters, usually OK]
+					MSG_BUF = UNIXgetdat(ControlConnection,2);
+                    
                     
                     //Skip free if it is the last one
                     if ((i+1) != Cons.size()){
 						free(MSG_BUF);
 					}
                     
-                    printf("Got Response 2\n");
+                    //printf("Got Response 2\n");
                 }
                 printf("Done Listing\n");
 
@@ -544,15 +551,23 @@ void controlServer(){
                 printf("Terminating a Connection\n");
                 free(MSG_BUF);
                 
-                UNIXsenddat(ControlConnection,"OK");
+                UNIXsenddat(ControlConnection,"Enter Port");
 
-                MSG_BUF = UNIXgetdat(ControlConnection,1);
+                MSG_BUF = UNIXgetdat(ControlConnection,7);
                 int tokill = stosi(MSG_BUF);
+                
+                if ((tokill >= 0) && (tokill < Cons.size())){
+					printf("Killing Connection %i\n",tokill);
+                
+					Cons[tokill]->Status = 0;
+					
+				}
+				else {
+					printf("Invalid Index Supplied\n");
+				}
                 free(MSG_BUF);
                 
-                printf("Killing Connection %i\n",tokill);
                 
-                Cons[tokill]->Status = 0;
                 
             }
             if (MSG_BUF != NULL){
