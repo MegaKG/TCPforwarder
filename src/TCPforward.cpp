@@ -90,6 +90,7 @@ void* forwarder(void* VIn){
     while (In->MyCon->Status){
         haveread = read(serv, Buffer, bufsize);
         if (haveread <= 0){
+			In->MyCon->Status = 0;
             break;
         }
         else {
@@ -97,7 +98,7 @@ void* forwarder(void* VIn){
         }
         
     }
-    In->MyCon->Status = 0;
+    
 }
 
 void* clienthandle(void* VIn){
@@ -148,7 +149,7 @@ void* clienthandle(void* VIn){
         printf("%i -> Reached Termination\n",myid);
     }
     else {
-        printf("%i -> Connection Failure\n",myid);
+        printf("%i -> Connection Failure to %s:%i\n",myid,DestIP.c_str(),DestPort);
         //Here we deallocate the connection struct pointer as we have already extracted the file descriptor
         free(NewCon);
     }
@@ -447,6 +448,10 @@ void* mainHandler(void* InArgs){
     }
 }
 
+int integerStringSize(int Input){
+	return (((int)ceil(log10(Input + 1)))+ 1);
+}
+
 
 void controlServer(){
 	//Establish a Unix Server
@@ -461,9 +466,15 @@ void controlServer(){
         
         while (1){
             MSG_BUF = UNIXgetdat(ControlConnection,1);
+            //Check if there was a disconnect
+            if (MSG_BUF == NULL){
+				printf("Control Socket Disconnect - SocketError\n");
+				break;
+			}
+			
             //Kill Connection
             if (MSG_BUF[0] == '\x00'){
-                printf("Control Socket Disconnect\n");
+                printf("Control Socket Disconnect Requested\n");
                 UNIXsenddat(ControlConnection,"Exit Connection");
                 break;
             }
@@ -496,57 +507,64 @@ void controlServer(){
                 UNIXsenddat(ControlConnection,"Server Terminated");
             }
             //List Connections By Index
+            //[TODO] After this runs, the main acceptor breaks for some reason
             else if (MSG_BUF[0] == '\x04'){
                 printf("Listing Active Connections\n");
                 free(MSG_BUF);
-
-                //First Send the Total Count
-                //Reuse MSG_BUF, building a string with the total count via sprintf
-                //printf("Int Size is %i\n",(((int)ceil(log10(Cons.size() + 1)))+ 1));
-                MSG_BUF = (char*)malloc(sizeof(char) * (((int)ceil(log10(Cons.size() + 1)))+ 1));
-                memset(MSG_BUF,0,(((int)ceil(log10(Cons.size() + 1)))+ 1));
-                //printf("Malloc\n");
+                if (Cons.size() != 0){
+					//First Send the Total Count
+					//Reuse MSG_BUF, building a string with the total count via sprintf
+					//printf("Int Size is %i\n",(((int)ceil(log10(Cons.size() + 1)))+ 1));
+					int StringSize = integerStringSize(Cons.size());
+					MSG_BUF = (char*)malloc(sizeof(char) * StringSize);
+					memset(MSG_BUF,0,StringSize);
+					//printf("Malloc\n");
                 
-                sprintf(MSG_BUF,"%i",Cons.size());
-                //printf("sprintf\n");
-                
-                UNIXsenddat(ControlConnection,MSG_BUF);
-                free(MSG_BUF);
-                //printf("Sent Size\n");
+					sprintf(MSG_BUF,"%i",Cons.size());
+					//printf("sprintf\n");
+				
+					UNIXsenddat(ControlConnection,MSG_BUF);
+					free(MSG_BUF);
+					//printf("Sent Size\n");
 
-                //Await Response [2 Characters, usually OK]
-                MSG_BUF = UNIXgetdat(ControlConnection,2);
-                free(MSG_BUF);
-                //printf("Got Response 1\n");
-
-                //Now Send all the Connections
-                for (int i = 0; i < Cons.size(); i++){
-                    //Send the IP address
-                    UNIXsenddat(ControlConnection,Cons[i]->ConnectedIP);
-
-                    //Await a response [2 Characters, usually OK]
+					//Await Response [2 Characters, usually OK]
 					MSG_BUF = UNIXgetdat(ControlConnection,2);
 					free(MSG_BUF);
-					
-					//Send the Target IP
-					UNIXsenddat(ControlConnection,Cons[i]->DestinationIP);
+					//printf("Got Response 1\n");
 
-                    //Await a response [2 Characters, usually OK]
-					MSG_BUF = UNIXgetdat(ControlConnection,2);
-                    
-                    
-                    //Skip free if it is the last one
-                    if ((i+1) != Cons.size()){
+					//Now Send all the Connections
+					for (int i = 0; i < Cons.size(); i++){
+						//Send the IP address
+						UNIXsenddat(ControlConnection,Cons[i]->ConnectedIP);
+
+						//Await a response [2 Characters, usually OK]
+						MSG_BUF = UNIXgetdat(ControlConnection,2);
 						free(MSG_BUF);
-					}
+					
+						//Send the Target IP
+						UNIXsenddat(ControlConnection,Cons[i]->DestinationIP);
+
+						//Await a response [2 Characters, usually OK]
+						MSG_BUF = UNIXgetdat(ControlConnection,2);
                     
-                    //printf("Got Response 2\n");
-                }
+						free(MSG_BUF);
+						MSG_BUF = NULL;
+
+                    
+						//printf("Got Response 2\n");
+					}
+				}
+				else {
+					printf("Nothing to Send\n");
+					UNIXsenddat(ControlConnection,"0");
+				}
+				MSG_BUF = NULL;
                 printf("Done Listing\n");
 
             }
 
             //Kill Connection By Index
+            //[TODO] Works, some connections persist though.
             else if (MSG_BUF[0] == '\x05'){
                 printf("Terminating a Connection\n");
                 free(MSG_BUF);
@@ -558,18 +576,16 @@ void controlServer(){
                 
                 if ((tokill >= 0) && (tokill < Cons.size())){
 					printf("Killing Connection %i\n",tokill);
-                
 					Cons[tokill]->Status = 0;
-					
 				}
 				else {
 					printf("Invalid Index Supplied\n");
 				}
                 free(MSG_BUF);
-                
-                
-                
+                MSG_BUF = NULL;
+
             }
+            //Clean up dangling pointers in loop if required
             if (MSG_BUF != NULL){
                 free(MSG_BUF);
                 MSG_BUF = NULL;
@@ -577,6 +593,7 @@ void controlServer(){
         }
         printf("Terminate Control Loop\n");
         close(ControlConnection->fd);
+        //Clean Up dangling pointers at end if required
         if (MSG_BUF != NULL){
                 free(MSG_BUF);
                 MSG_BUF = NULL;
@@ -631,8 +648,10 @@ int main(int argc, char** argv){
 	//Cleanup
 	printf("Cleaning Up...\n");
 	RUN = 0;
+	//Program Crashes Here, [TODO]
     pthread_cancel(*MainTh);
     pthread_join(*MainTh,&retval);
+    printf("Main Thread has Stopped\n");
 	free(MainArgs);
 	free(MainTh);
 	printf("Reached Program Terminate\n");
