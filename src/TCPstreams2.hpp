@@ -28,8 +28,11 @@ struct TCPServer* TCPopenserver(string IP, int port){
     
     struct TCPServer* MySock = (struct TCPServer*)malloc(sizeof(struct TCPServer));
     
-    if (IP == "0.0.0.0"){
+     if (strcmp(IP.c_str(),"0.0.0.0") == 0){
         MySock->address.sin_addr.s_addr = INADDR_ANY;
+    }
+    else {
+        inet_pton(AF_INET, IP.c_str(), &MySock->address.sin_addr);
     }
 
     MySock->address.sin_family = AF_INET;
