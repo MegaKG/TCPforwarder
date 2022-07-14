@@ -47,24 +47,28 @@ struct UNIXServer* UNIXopenserver(char* Path){
     //If Socket Open Failure
     if ( (server == 0) || (server == -1) ) {
     	free(MySock);
+        perror("UNIX Socket Error 1:");
         return NULL; //Error 1
     }
 
     //Connect to Socket
     if ( setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))  ) {
     	free(MySock);
+        perror("UNIX Socket Error 2:");
         return NULL; //Error 2
     }
 
     //bind to port
     if (bind(server, (struct sockaddr *)&MySock->address, sizeof(MySock->address)) < 0){
     	free(MySock);
+        perror("UNIX Socket Error 3:");
         return NULL; //Error 3
     }
 
     //Now Listen on that port
     if (listen(server, 100) < 0){
     	free(MySock);
+        perror("UNIX Socket Error 4:");
         return NULL; //Error 4
     }
 
@@ -117,6 +121,7 @@ struct UNIXConnection* UNIXopenclient(char* Path){
 
     if (sock < 0){
     	free(Con);
+        perror("UNIX Socket Error 1:");
         return NULL; //Error 1
     }
 
@@ -130,8 +135,9 @@ struct UNIXConnection* UNIXopenclient(char* Path){
     //printf("Connecting to %s\n",Path);
 
     //Connect to Socket
+    perror("UNIX Socket Error 2:");
     if ( connect(sock, (struct sockaddr *)&Con->address, sizeof(Con->address) ) < 0  ){
-        return NULL; //Error 3
+        return NULL; //Error 2
     }
 
     Con->fd = sock;

@@ -287,7 +287,6 @@ int loadSettings(int argc, char** argv){
         if (getConfValue("Host_address",MyArgs) != NULL){
             HostIP.assign(getConfValue("Host_address",MyArgs));
         }
-
         if (getConfValue("Buffer_size",MyArgs) != NULL){
             bufsize = stosi(getConfValue("Buffer_size",MyArgs));
         }
@@ -380,6 +379,11 @@ void* mainHandler(void* InArgs){
 	//Open the Server
     printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize,ConLimit);
     cserver = TCPopenserver(HostIP,HostPort);
+
+    if (cserver == NULL){
+        printf("Failed to open Server Socket, Check Permissions!\n");
+        exit(1);
+    }
     
     
     //Handler main loop
@@ -456,6 +460,10 @@ int integerStringSize(int Input){
 void controlServer(){
 	//Establish a Unix Server
     struct UNIXServer* ControlServer = UNIXopenserver((char*)ControlSocketPath.c_str());
+    if (ControlServer == NULL){
+        printf("Failed to Open Control Server\n");
+        exit(1);
+    }
     struct UNIXConnection* ControlConnection = NULL;
 
     //Strings are malloced to this, they must be cleared when not needed

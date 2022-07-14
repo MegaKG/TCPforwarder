@@ -47,24 +47,28 @@ struct TCPServer* TCPopenserver(string IP, int port){
     //If Socket Open Failure
     if ( (server == 0) || (server == -1) ) {
     	free(MySock);
+        perror("Socket Error 1:");
         return NULL; //Error 1
     }
 
     //Connect to Socket
     if ( setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))  ) {
     	free(MySock);
+        perror("Socket Error 2:");
         return NULL; //Error 2
     }
 
     //bind to port
     if (bind(server, (struct sockaddr *)&MySock->address, sizeof(MySock->address)) < 0){
     	free(MySock);
+        perror("Socket Error 3:");
         return NULL; //Error 3
     }
 
     //Now Listen on that port
     if (listen(server, 100) < 0){
     	free(MySock);
+        perror("Socket Error 4:");
         return NULL; //Error 4
     }
 
@@ -81,6 +85,7 @@ struct TCPConnection* TCPaccept(struct TCPServer* server){
     new_socket = accept(server->fd, (struct sockaddr *)&Con->address, (socklen_t*)&sizeaddr);
     if (new_socket < 0){
     	free(Con);
+        perror("Socket Error 5:");
         return NULL; //Error 5
     }
     Con->fd = new_socket;
@@ -116,6 +121,7 @@ struct TCPConnection* TCPopenclient(string IP, int port){
 
     if (sock < 0){
     	free(Con);
+        perror("Socket Error 2:");
         return NULL; //Error 1
     }
 
@@ -124,10 +130,12 @@ struct TCPConnection* TCPopenclient(string IP, int port){
 
     //Convert IP Addresses
     if ( inet_pton(AF_INET, IP.c_str(), &Con->address.sin_addr) <= 0 ){
+        perror("Socket Error 2:");
         return NULL; // Error 2
     }
     //Connect to Socket
     if ( connect(sock, (struct sockaddr *)&Con->address, sizeof(Con->address) ) < 0  ){
+        perror("Socket Error 3:");
         return NULL; //Error 3
     }
 
