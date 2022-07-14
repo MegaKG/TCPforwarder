@@ -28,12 +28,16 @@ struct ServerSocketData* openserver(string IP, int port){
     
     struct ServerSocketData* MySock = (struct ServerSocketData*)malloc(sizeof(struct ServerSocketData));
     
-    if (IP == "0.0.0.0"){
+    if (strcmp(IP.c_str(),"0.0.0.0") == 0){
         MySock->address.sin_addr.s_addr = INADDR_ANY;
+    }
+    else {
+        inet_pton(AF_INET, IP.c_str(), &MySock->address.sin_addr);
     }
 
     MySock->address.sin_family = AF_INET;
     MySock->address.sin_port = htons( port );
+    
 
 
     
