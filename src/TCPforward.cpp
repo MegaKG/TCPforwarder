@@ -1,5 +1,5 @@
 #include <iostream>
-#include "TCPstreams2.hpp"
+#include "TCPstreams2.h"
 #include "StringInputs2.h"
 #include <vector>
 #include <stdio.h>
@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <signal.h>
 #include "LoadConfig2.h"
-#include "UNIXstreams.hpp"
+#include "UNIXstreams.h"
 #include <math.h>
 
 using namespace std;
