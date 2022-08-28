@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Aug 28 22:10:16 2022
+# Make data base, printed on Sun Aug 28 22:18:32 2022
 
 # Variables
 
@@ -195,6 +195,8 @@ GDK_BACKEND = x11
 # automatic
 +F = $(notdir $+)
 # environment
+NO_AT_BRIDGE = 1
+# environment
 CINNAMON_VERSION = 5.2.7
 # environment
 QT_ACCESSIBILITY = 1
@@ -213,7 +215,7 @@ LC_ALL = C
 # environment
 GJS_DEBUG_TOPICS = JS ERROR;JS LOG
 # environment
-GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/76294786_fbea_44ba_b312_e2c66457eee9
+GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/0717e3c2_a117_4e9b_b16c_87c1733e0f32
 # automatic
 ^F = $(notdir $^)
 # environment
@@ -235,7 +237,7 @@ TERM = xterm-256color
 # environment
 VSCODE_PID = 11175
 # variable set hash-table stats:
-# Load=112/1024=11%, Rehash=0, Collisions=13/140=9%
+# Load=113/1024=11%, Rehash=0, Collisions=13/141=9%
 
 # Pattern-specific Variable Values
 
@@ -275,9 +277,9 @@ all:
 # automatic
 # ^ := 
 # automatic
+ 
 # ? := 
 # variable set hash-table stats:
- 
 # Load=8/32=25%, Rehash=0, Collisions=1/11=9%
 #  recipe to execute (from 'Makefile', line 36):
 	deb
@@ -359,6 +361,6 @@ install:
 # strcache performance: lookups = 32 / hit rate = 34%
 # hash-table stats:
 # Load=21/8192=0%, Rehash=0, Collisions=1/32=3%
-# Finished Make data base on Sun Aug 28 22:10:16 2022
+# Finished Make data base on Sun Aug 28 22:18:32 2022
 
  
