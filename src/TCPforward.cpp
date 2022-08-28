@@ -1,24 +1,23 @@
 #include <iostream>
-#include "TCPstreams2.h"
-//#include "StringInputs2.h"
 #include <vector>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <cstdlib>
 #include <signal.h>
-//#include "LoadConfig2.h"
-#include "UNIXstreams.h"
 #include <math.h>
+
 #include "HelpMenu.h"
 #include "MainConfigLoader.h"
+#include "TCPstreams2.h"
+#include "UNIXstreams.h"
 
 using namespace std;
 
 
 
 
-//Filler Initial Values, to be initialised
+//Filler Initial Values, to be initialised by the MainConfigLoader Library
 string HostIP = "127.0.0.1";
 string DestIP = "127.0.0.1";
 int HostPort = 5000;
@@ -29,6 +28,8 @@ int ConLimit = 0;
 
 int ControlSocket = 0;
 string ControlSocketPath = "./socket";
+
+//Main Run Flag
 int RUN = 1;
 
 
