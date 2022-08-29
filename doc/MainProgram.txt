@@ -1,0 +1,78 @@
+The main program (TCPforward.cpp )should operate as follows:
+
+Program Start:
+1: Load Configuration from both Commandline and File if required
+2: Start a new thread that acts as the main handler for server connections (Thread 1)
+3: If a control socket is specified, goto 5
+4: Loop Indefinitely
+5: Start a Unix Socket on specified Path
+6: Loop:
+    - Accept a Connection:
+    - Loop:
+        - Receive and Interpret Command from Socket
+        - Break this Loop if required
+    - If a terminate was requested, break this loop as well
+7: Shut Down Main Handler
+8: Free Memory and Objects
+Program Terminate
+
+Thread 1:
+1: Start Server on Host IP / Port specified in config
+2: If max threads hasn't been reached, goto 4
+3: Await space, running garbage Collector every second
+4: Accept the connection
+5: Start a new thread to handle the client (Thread 2)
+6: Run the Garbage Collector
+End Thread 1
+
+Thread 2:
+1: Connect to TCP server
+2: Start Two Threads forwarding between the two sockets
+End Thread 2
+
+
+
+Important Global Variables:
+string HostIP - The Address that the TCP proxy hosts on
+string DestIP - The target destination IP
+int HostPort - The port that the TCP proxy hosts on
+int DestPort - The target destination port
+int bufsize - The Buffer size for the forwarder
+int ConLimit - A limiter for the amount of concurrent connections. Setting this to 0 disables it.
+
+int ControlSocket - This flag determines whether the control socket is activated
+string ControlSocketPath - If the control socket is activated, this is the path used
+int RUN - Global run flag. All loops must terminate if this becomes zero
+
+
+These arguments are fed into the forwarder function thread for Client to Server or Server to Client
+struct args {
+  int to; - File Descriptor to Write
+  int from; - File Descriptor to Read
+  struct connection* MyCon;
+};
+
+These arguments are fed to the main server connection handler / acceptor
+struct handlerArgs {
+	int argc;
+	char** argv;
+};
+
+These arguments are sent to the main client handler
+struct connection {
+  int Server; - The Main Server File Descriptor
+  int ServerCon; - The Server Connection File Descriptor
+  int ClientCon; - The Client Connection File Descriptor
+  int Status; - This flag determines if the connection is active  
+  int ID; - The Individual ID of the Client
+  
+  //These Exist only to be cleared
+  pthread_t* C2ST; - Client to Server Thread
+  pthread_t* S2CT; - Server to Client Thread
+  struct args* C2SA; - Client to Server Arguments
+  struct args* S2CA; - Server to Client Arguments
+};
+
+Stores all Active connections and their respective threads
+vector <connection*> Cons; - Connection Structs
+vector <pthread_t*> Threads; - Their Matching Client Handler Threads

@@ -1,0 +1,7 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/media/kaelan/Disk/Dev/TCPforwarderControl'
+mkdir build
+g++ src/TCPforward.cpp -pthread -lm -ggdb -o build/TCPforward
+mv -v build/TCPforward ./
+make: Leaving directory '/media/kaelan/Disk/Dev/TCPforwarderControl'
+ 

@@ -4,68 +4,71 @@
 #include <stdio.h> 
 #include <sys/socket.h> 
 #include <stdlib.h> 
-#include <netinet/in.h> 
-#include <string> 
 #include <cstring>
 #include <arpa/inet.h>
+#include <sys/un.h>
+#include <string.h>
+
 using namespace std;
 
 //The Address Struct
-struct ServerSocketData {
-	struct sockaddr_in address;
+struct UNIXServer {
+	struct sockaddr_un address;
 	int fd;
 };
 
-struct TCPConnection {
-	struct sockaddr_in address;
+struct UNIXConnection {
+	struct sockaddr_un address;
 	int fd;
 };
 
 
-struct ServerSocketData* openserver(string IP, int port){
+struct UNIXServer* UNIXopenserver(char* Path){
     int opt = 1;
     int server;
     
-    struct ServerSocketData* MySock = (struct ServerSocketData*)malloc(sizeof(struct ServerSocketData));
+    struct UNIXServer* MySock = (struct UNIXServer*)malloc(sizeof(struct UNIXServer));
     
-    if (strcmp(IP.c_str(),"0.0.0.0") == 0){
-        MySock->address.sin_addr.s_addr = INADDR_ANY;
-    }
-    else {
-        inet_pton(AF_INET, IP.c_str(), &MySock->address.sin_addr);
-    }
+    //Delete any old files
+    remove(Path);
 
-    MySock->address.sin_family = AF_INET;
-    MySock->address.sin_port = htons( port );
+    //Clean the Struct
+    memset(&MySock->address, 0, sizeof(struct sockaddr_un));
     
-
-
-    
+    //Copy our path in
+    MySock->address.sun_family = AF_UNIX;
+    strcpy(MySock->address.sun_path,Path);
 
     //Open Socket
-    server = socket(AF_INET, SOCK_STREAM, 0);
+    server = socket(AF_UNIX, SOCK_STREAM, 0);
+
+    
     
     //If Socket Open Failure
     if ( (server == 0) || (server == -1) ) {
     	free(MySock);
+        perror("UNIX Socket Error 1:");
         return NULL; //Error 1
     }
 
     //Connect to Socket
     if ( setsockopt(server, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))  ) {
     	free(MySock);
+        perror("UNIX Socket Error 2:");
         return NULL; //Error 2
     }
 
     //bind to port
     if (bind(server, (struct sockaddr *)&MySock->address, sizeof(MySock->address)) < 0){
     	free(MySock);
+        perror("UNIX Socket Error 3:");
         return NULL; //Error 3
     }
 
     //Now Listen on that port
     if (listen(server, 100) < 0){
     	free(MySock);
+        perror("UNIX Socket Error 4:");
         return NULL; //Error 4
     }
 
@@ -74,9 +77,9 @@ struct ServerSocketData* openserver(string IP, int port){
 }
 
 
-struct TCPConnection* accept(struct ServerSocketData* server){
+struct UNIXConnection* UNIXaccept(struct UNIXServer* server){
     int new_socket;
-    struct TCPConnection* Con = (struct TCPConnection*)malloc(sizeof(struct TCPConnection));
+    struct UNIXConnection* Con = (struct UNIXConnection*)malloc(sizeof(struct UNIXConnection));
     
     int sizeaddr = sizeof(Con->address);
     new_socket = accept(server->fd, (struct sockaddr *)&Con->address, (socklen_t*)&sizeaddr);
@@ -88,11 +91,12 @@ struct TCPConnection* accept(struct ServerSocketData* server){
     return Con;
 }
 
-void senddat(struct TCPConnection* socketin, char* MSG){
+void UNIXsenddat(struct UNIXConnection* socketin, char* MSG){
+    //printf("FD %i\n",socketin->fd);
     send(socketin->fd, MSG, strlen(MSG), 0);
 }
 
-char* getdat(struct TCPConnection* socketin, int buffer = 1024){
+char* UNIXgetdat(struct UNIXConnection* socketin, int buffer = 1024){
     char indat[buffer+1];
     memset(indat,0,buffer+1);
 
@@ -111,25 +115,29 @@ char* getdat(struct TCPConnection* socketin, int buffer = 1024){
 }
 
 
-struct TCPConnection* openclient(string IP, int port){
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    struct TCPConnection* Con = (struct TCPConnection*)malloc(sizeof(struct TCPConnection));
+struct UNIXConnection* UNIXopenclient(char* Path){
+    int sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    struct UNIXConnection* Con = (struct UNIXConnection*)malloc(sizeof(struct UNIXConnection));
 
     if (sock < 0){
     	free(Con);
+        perror("UNIX Socket Error 1:");
         return NULL; //Error 1
     }
 
-    Con->address.sin_family = AF_INET;
-    Con->address.sin_port = htons(port);
+    //Clean the Struct
+    memset(&Con->address, 0, sizeof(struct sockaddr_un));
+    
+    //Copy our path in
+    Con->address.sun_family = AF_UNIX;
+    strcpy(Con->address.sun_path,Path);
 
-    //Convert IP Addresses
-    if ( inet_pton(AF_INET, IP.c_str(), &Con->address.sin_addr) <= 0 ){
-        return NULL; // Error 2
-    }
+    //printf("Connecting to %s\n",Path);
+
     //Connect to Socket
+    perror("UNIX Socket Error 2:");
     if ( connect(sock, (struct sockaddr *)&Con->address, sizeof(Con->address) ) < 0  ){
-        return NULL; //Error 3
+        return NULL; //Error 2
     }
 
     Con->fd = sock;
