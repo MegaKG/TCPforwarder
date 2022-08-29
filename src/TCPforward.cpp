@@ -554,7 +554,8 @@ int main(int argc, char** argv){
 	//Cleanup
 	printf("Cleaning Up...\n");
 	RUN = 0;
-	//Program Crashes Here, [TODO]
+	
+    //Kill the main Thread
     pthread_cancel(*MainTh);
     pthread_join(*MainTh,&retval);
     printf("Main Thread has Stopped\n");
