@@ -325,6 +325,8 @@ int integerStringSize(int Input){
 
 
 void controlServer(){
+    int i;
+
 	//Establish a Unix Server
     struct UNIXServer* ControlServer = UNIXopenserver((char*)ControlSocketPath.c_str());
     if (ControlServer == NULL){
@@ -380,35 +382,41 @@ void controlServer(){
                 printf("Control Socket Request Terminate\n");
                 RUN = 0;
                 UNIXsenddat(ControlConnection,"Server Terminated");
+
+                //Kill all remaining Server Connections
+                for (i = 0; i < Cons.size(); i++){
+                    Cons[i]->Status = 0;
+                }
             }
             //List Connections By Index
-            //[TODO] After this runs, the main acceptor breaks for some reason
             else if (MSG_BUF[0] == '\x04'){
                 printf("Listing Active Connections\n");
+                //Call the GC to prevent False Positives
+                garbageCollector();
+
                 free(MSG_BUF);
                 if (Cons.size() != 0){
 					//First Send the Total Count
 					//Reuse MSG_BUF, building a string with the total count via sprintf
-					//printf("Int Size is %i\n",(((int)ceil(log10(Cons.size() + 1)))+ 1));
+					
 					int StringSize = integerStringSize(Cons.size());
 					MSG_BUF = (char*)malloc(sizeof(char) * StringSize);
 					memset(MSG_BUF,0,StringSize);
-					//printf("Malloc\n");
+					
                 
 					sprintf(MSG_BUF,"%i",Cons.size());
-					//printf("sprintf\n");
 				
 					UNIXsenddat(ControlConnection,MSG_BUF);
 					free(MSG_BUF);
-					//printf("Sent Size\n");
 
 					//Await Response [2 Characters, usually OK]
 					MSG_BUF = UNIXgetdat(ControlConnection,2);
 					free(MSG_BUF);
-					//printf("Got Response 1\n");
 
 					//Now Send all the Connections
-					for (int i = 0; i < Cons.size(); i++){
+					for (i = 0; i < Cons.size(); i++){
+                        printf("List: %s -> %s ID: %i Status: %i\n",Cons[i]->ConnectedIP,Cons[i]->DestinationIP,Cons[i]->ID,Cons[i]->Status);
+
 						//Send the IP address
 						UNIXsenddat(ControlConnection,Cons[i]->ConnectedIP);
 
@@ -424,9 +432,6 @@ void controlServer(){
                     
 						free(MSG_BUF);
 						MSG_BUF = NULL;
-
-                    
-						//printf("Got Response 2\n");
 					}
 				}
 				else {
@@ -439,7 +444,6 @@ void controlServer(){
             }
 
             //Kill Connection By Index
-            //[TODO] Works, some connections persist though.
             else if (MSG_BUF[0] == '\x05'){
                 printf("Terminating a Connection\n");
                 free(MSG_BUF);
@@ -452,6 +456,12 @@ void controlServer(){
                 if ((tokill >= 0) && (tokill < Cons.size())){
 					printf("Killing Connection %i\n",tokill);
 					Cons[tokill]->Status = 0;
+
+                    
+                    //Wait a moment for the sockets to close
+                    usleep(200);
+                    //Clean up after kill
+                    garbageCollector();
 				}
 				else {
 					printf("Invalid Index Supplied\n");
@@ -472,7 +482,28 @@ void controlServer(){
         if (MSG_BUF != NULL){
                 free(MSG_BUF);
                 MSG_BUF = NULL;
-        }   
+        }  
+
+        //Ensure that all sockets are closed before returning
+        printf("Awaiting Socket Close\n");
+        int count;
+        while (1){
+            count = 0;
+            for (i = 0; i < Cons.size(); i++){
+                if (Cons[i]->Status){
+                    count += 1;
+                }
+            }
+            if (count == 0){
+                break;
+            }
+
+            sleep(1);
+        }
+
+        //Call the GC
+        garbageCollector();
+
     }
 }
 

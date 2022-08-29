@@ -6,7 +6,7 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Sun Aug 28 22:18:32 2022
+# Make data base, printed on Mon Aug 29 21:55:19 2022
 
 # Variables
 
@@ -81,7 +81,7 @@ PATH = /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/
 # environment
 GPG_AGENT_INFO = /run/user/1000/gnupg/S.gpg-agent:0:1
 # environment
-SESSION_MANAGER = local/MercuryMint.isnet.local:@/tmp/.ICE-unix/3579,unix/MercuryMint.isnet.local:/tmp/.ICE-unix/3579
+SESSION_MANAGER = local/MercuryMint.isnet.local:@/tmp/.ICE-unix/3411,unix/MercuryMint.isnet.local:/tmp/.ICE-unix/3411
 # environment
 XDG_RUNTIME_DIR = /run/user/1000
 # environment
@@ -113,7 +113,7 @@ QT_QPA_PLATFORMTHEME = qt5ct
 # environment
 XDG_SEAT = seat0
 # environment
-SSH_AGENT_PID = 3543
+SSH_AGENT_PID = 3394
 # environment
 ORIGINAL_XDG_CURRENT_DESKTOP = X-Cinnamon
 # environment
@@ -168,8 +168,6 @@ LIBVIRT_DEFAULT_URI = qemu:///system
 %D = $(patsubst %/,%,$(dir $%))
 # default
 MAKE_COMMAND := make
-# environment
-OLDPWD = /media/kaelan/Disk/Dev/TCPforwarderControl/src
 # default
 .VARIABLES := 
 # environment
@@ -195,10 +193,6 @@ GDK_BACKEND = x11
 # automatic
 +F = $(notdir $+)
 # environment
-NO_AT_BRIDGE = 1
-# environment
-CINNAMON_VERSION = 5.2.7
-# environment
 QT_ACCESSIBILITY = 1
 # environment
 TEMP = /tmp/user/1000
@@ -213,21 +207,17 @@ BUILD = build
 # environment
 LC_ALL = C
 # environment
-GJS_DEBUG_TOPICS = JS ERROR;JS LOG
-# environment
-GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/0717e3c2_a117_4e9b_b16c_87c1733e0f32
+GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/7aadc8eb_6af6_4a01_b4bd_9b9327d6b57b
 # automatic
 ^F = $(notdir $^)
 # environment
-GNOME_TERMINAL_SERVICE = :1.153
+GNOME_TERMINAL_SERVICE = :1.258
 # default
 SUFFIXES := 
 # environment
 CHROME_DESKTOP = code-url-handler.desktop
 # default
 .INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
-# environment
-GJS_DEBUG_OUTPUT = stderr
 # default
 .RECIPEPREFIX := 
 # environment
@@ -235,9 +225,9 @@ LANG = C
 # environment
 TERM = xterm-256color
 # environment
-VSCODE_PID = 11175
+VSCODE_PID = 39996
 # variable set hash-table stats:
-# Load=113/1024=11%, Rehash=0, Collisions=13/141=9%
+# Load=108/1024=11%, Rehash=0, Collisions=13/136=10%
 
 # Pattern-specific Variable Values
 
@@ -245,9 +235,9 @@ VSCODE_PID = 11175
 
 # Directories
 
-# . (device 64768, inode 156): 12 files, no impossibilities.
+# . (device 64768, inode 156): 11 files, no impossibilities.
 
-# 12 files, no impossibilities in 1 directories.
+# 11 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -277,7 +267,6 @@ all:
 # automatic
 # ^ := 
 # automatic
- 
 # ? := 
 # variable set hash-table stats:
 # Load=8/32=25%, Rehash=0, Collisions=1/11=9%
@@ -288,6 +277,7 @@ all:
 bin:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
+ 
 #  File has not been updated.
 #  recipe to execute (from 'Makefile', line 7):
 	mkdir $(BUILD)
@@ -355,12 +345,12 @@ install:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 21 / storage = 156 B / avg = 7 B
-# current buf: size = 8162 B / used = 156 B / count = 21 / avg = 7 B
+# strcache buffers: 1 (0) / strings = 20 / storage = 145 B / avg = 7 B
+# current buf: size = 8162 B / used = 145 B / count = 20 / avg = 7 B
 
-# strcache performance: lookups = 32 / hit rate = 34%
+# strcache performance: lookups = 31 / hit rate = 35%
 # hash-table stats:
-# Load=21/8192=0%, Rehash=0, Collisions=1/32=3%
-# Finished Make data base on Sun Aug 28 22:18:32 2022
+# Load=20/8192=0%, Rehash=0, Collisions=1/31=3%
+# Finished Make data base on Mon Aug 29 21:55:19 2022
 
  
