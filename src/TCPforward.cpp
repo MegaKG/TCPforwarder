@@ -484,27 +484,28 @@ void controlServer(){
                 MSG_BUF = NULL;
         }  
 
-        //Ensure that all sockets are closed before returning
-        printf("Awaiting Socket Close\n");
-        int count;
-        while (1){
-            count = 0;
-            for (i = 0; i < Cons.size(); i++){
-                if (Cons[i]->Status){
-                    count += 1;
-                }
-            }
-            if (count == 0){
-                break;
-            }
-
-            sleep(1);
-        }
-
-        //Call the GC
-        garbageCollector();
+        
 
     }
+    //Ensure that all sockets are closed before returning
+    printf("Awaiting Socket Close\n");
+    int count;
+    while (1){
+        count = 0;
+        for (i = 0; i < Cons.size(); i++){
+            if (Cons[i]->Status){
+                count += 1;
+            }
+        }
+        if (count == 0){
+            break;
+        }
+
+        sleep(1);
+    }
+
+    //Call the GC
+    garbageCollector();
 }
 
 
