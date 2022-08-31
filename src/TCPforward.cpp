@@ -163,16 +163,28 @@ void* clienthandle(void* VIn){
 }
 
 //The Grim Reaper
+char GC_Lock = 0;
 void garbageCollector(){
     signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can detect and fix these properly
+
+    //Acquire the Lock
+    while (GC_Lock){
+        usleep(100);
+    }
+    GC_Lock = 1;
+
     //Dead Thread / Connection Indexes are stored in this vector
     vector<int> ToDel;
 
+    //printf("GC Start\n");
     for (int i = 0; i < Cons.size(); i++){
         if (Cons[i]->Status == 0){
             ToDel.push_back(i);
+            //printf("Find %i",i);
         }
     }
+    //printf("Found Procs to Kill\n");
+
 
     //After finding the dead threads / connections, we kill them off
 	void* val;
@@ -184,39 +196,51 @@ void garbageCollector(){
         //Kill the Connections
         close(Cons[ToDel[i]]->ClientCon);
         close(Cons[ToDel[i]]->ServerCon);
+        //printf("1 Close\n");
 
         
         //Now Terminate the Threads
         pthread_cancel(*Cons[ToDel[i]]->C2ST);
         pthread_cancel(*Cons[ToDel[i]]->S2CT);
+        //printf("2 Cancel Threads\n");
         
         //Await the result
         pthread_join(*Cons[ToDel[i]]->C2ST,&val);
         pthread_join(*Cons[ToDel[i]]->S2CT,&val);
+        //printf("3 Join\n");
 
         //Clean Up the Dangling Pointers
         free(Cons[ToDel[i]]->C2SA);
         free(Cons[ToDel[i]]->S2CA);
         free(Cons[ToDel[i]]->C2ST);
         free(Cons[ToDel[i]]->S2CT); 
+        //printf("4 Free\n");
         
         //The Main Thread Stuff
         pthread_cancel(*Threads[ToDel[i]]);
         pthread_join(*Threads[ToDel[i]],&val);
+        //printf("5 Man PThread\n");
         
         //Kill off the IP String names
         free(Cons[ToDel[i]]->ConnectedIP);
         free(Cons[ToDel[i]]->DestinationIP);
+        //printf("6 Free Main\n");
 
         //Clean up Dangling Pointers
         free(Cons[ToDel[i]]);
         free(Threads[ToDel[i]]);
+        //printf("7 Free Main\n");
 
         //Finally Destroy their references in the Connection and Thread Arrays
         Threads.erase(Threads.begin() + ToDel[i]);
         Cons.erase(Cons.begin() + ToDel[i]);
+        //printf("8 Erase\n");
         
     }
+    //printf("End GC\n");
+
+    //Release the Lock
+    GC_Lock = 0;
 
 }
 
@@ -313,6 +337,7 @@ void* mainHandler(void* InArgs){
             free(ccon);
 
             garbageCollector();
+
             counter += 1;
         }
 

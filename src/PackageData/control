@@ -1,5 +1,5 @@
 Package: TCPforward
-Version: 4.0-0
+Version: 5.0-0
 Section: utils
 Priority: optional
 Architecture: all
