@@ -210,25 +210,50 @@ void garbageCollector(){
         //printf("3 Join\n");
 
         //Clean Up the Dangling Pointers
-        free(Cons[ToDel[i]]->C2SA);
-        free(Cons[ToDel[i]]->S2CA);
-        free(Cons[ToDel[i]]->C2ST);
-        free(Cons[ToDel[i]]->S2CT); 
+        if (Cons[ToDel[i]]->C2SA != NULL){
+            free(Cons[ToDel[i]]->C2SA);
+            Cons[ToDel[i]]->C2SA = NULL;
+        }  
+        if (Cons[ToDel[i]]->S2CA != NULL){
+            free(Cons[ToDel[i]]->S2CA);
+            Cons[ToDel[i]]->S2CA = NULL;
+        }  
+        if (Cons[ToDel[i]]->C2ST != NULL){
+            free(Cons[ToDel[i]]->C2ST);
+            Cons[ToDel[i]]->C2ST = NULL;
+        }  
+        if (Cons[ToDel[i]]->S2CT != NULL){
+            free(Cons[ToDel[i]]->S2CT);
+            Cons[ToDel[i]]->S2CT = NULL;
+        }  
+
         //printf("4 Free\n");
         
         //The Main Thread Stuff
         pthread_cancel(*Threads[ToDel[i]]);
         pthread_join(*Threads[ToDel[i]],&val);
-        //printf("5 Man PThread\n");
+        //printf("5 Main PThread\n");
         
-        //Kill off the IP String names
-        free(Cons[ToDel[i]]->ConnectedIP);
-        free(Cons[ToDel[i]]->DestinationIP);
+        //Kill off the IP String names [BROKEN]
+        if (Cons[ToDel[i]]->ConnectedIP != NULL){
+            free(Cons[ToDel[i]]->ConnectedIP);
+            Cons[ToDel[i]]->ConnectedIP = NULL;
+        }
+        if (Cons[ToDel[i]]->DestinationIP != NULL){
+            free(Cons[ToDel[i]]->DestinationIP);
+            Cons[ToDel[i]]->DestinationIP = NULL;
+        }
         //printf("6 Free Main\n");
 
-        //Clean up Dangling Pointers
-        free(Cons[ToDel[i]]);
-        free(Threads[ToDel[i]]);
+        //Clean up Dangling Pointers [BROKEN]
+        if (Cons[ToDel[i]] != NULL){
+            free(Cons[ToDel[i]]);
+            Cons[ToDel[i]] = NULL;
+        }
+        if (Threads[ToDel[i]] != NULL){
+            free(Threads[ToDel[i]]);
+            Threads[ToDel[i]] = NULL;
+        }
         //printf("7 Free Main\n");
 
         //Finally Destroy their references in the Connection and Thread Arrays
@@ -283,7 +308,7 @@ void* mainHandler(void* InArgs){
 		if ((Cons.size() > ConLimit) && (ConLimit != 0)){
 			printf("Exceeded Connection Limit, waiting...\n");
 			while (Cons.size() > ConLimit){
-				sleep(1);
+				usleep(100);
 				garbageCollector();
 			}
 			printf("Space Free, Proceeding\n");
