@@ -11,6 +11,7 @@
 #include "MainConfigLoader.h"
 #include "TCPstreams2.h"
 #include "UNIXstreams.h"
+#include "dnsresolve.h"
 
 using namespace std;
 
@@ -176,7 +177,7 @@ void garbageCollector(){
     //Dead Thread / Connection Indexes are stored in this vector
     vector<int> ToDel;
 
-    //printf("GC Start\n");
+    printf("GC Start\n");
     for (int i = 0; i < Cons.size(); i++){
         if (Cons[i]->Status == 0){
             ToDel.push_back(i);
@@ -196,18 +197,18 @@ void garbageCollector(){
         //Kill the Connections
         close(Cons[ToDel[i]]->ClientCon);
         close(Cons[ToDel[i]]->ServerCon);
-        //printf("1 Close\n");
+        printf("1 Close\n");
 
         
         //Now Terminate the Threads
         pthread_cancel(*Cons[ToDel[i]]->C2ST);
         pthread_cancel(*Cons[ToDel[i]]->S2CT);
-        //printf("2 Cancel Threads\n");
+        printf("2 Cancel Threads\n");
         
         //Await the result
         pthread_join(*Cons[ToDel[i]]->C2ST,&val);
         pthread_join(*Cons[ToDel[i]]->S2CT,&val);
-        //printf("3 Join\n");
+        printf("3 Join\n");
 
         //Clean Up the Dangling Pointers
         if (Cons[ToDel[i]]->C2SA != NULL){
@@ -227,12 +228,12 @@ void garbageCollector(){
             Cons[ToDel[i]]->S2CT = NULL;
         }  
 
-        //printf("4 Free\n");
+        printf("4 Free\n");
         
         //The Main Thread Stuff
         pthread_cancel(*Threads[ToDel[i]]);
         pthread_join(*Threads[ToDel[i]],&val);
-        //printf("5 Main PThread\n");
+        printf("5 Main PThread\n");
         
         //Kill off the IP String names [BROKEN]
         if (Cons[ToDel[i]]->ConnectedIP != NULL){
@@ -243,7 +244,7 @@ void garbageCollector(){
             free(Cons[ToDel[i]]->DestinationIP);
             Cons[ToDel[i]]->DestinationIP = NULL;
         }
-        //printf("6 Free Main\n");
+        printf("6 Free Main\n");
 
         //Clean up Dangling Pointers [BROKEN]
         if (Cons[ToDel[i]] != NULL){
@@ -254,15 +255,15 @@ void garbageCollector(){
             free(Threads[ToDel[i]]);
             Threads[ToDel[i]] = NULL;
         }
-        //printf("7 Free Main\n");
+        printf("7 Free Main\n");
 
         //Finally Destroy their references in the Connection and Thread Arrays
         Threads.erase(Threads.begin() + ToDel[i]);
         Cons.erase(Cons.begin() + ToDel[i]);
-        //printf("8 Erase\n");
+        printf("8 Erase\n");
         
     }
-    //printf("End GC\n");
+    printf("End GC\n");
 
     //Release the Lock
     GC_Lock = 0;
@@ -294,6 +295,15 @@ void* mainHandler(void* InArgs){
 
 	//Open the Server
     printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize,ConLimit);
+    printf("Resolving....\n");
+    char* ForwardHost  = getIP((char*)HostIP.c_str());
+    char* ForwardGuest = getIP((char*)DestIP.c_str());
+    printf("Host %s->%s Dest %s->%s\n",HostIP.c_str(),ForwardHost,DestIP.c_str(),ForwardGuest);
+    HostIP.assign(ForwardHost);
+    DestIP.assign(ForwardGuest);
+    free(ForwardGuest);
+    free(ForwardHost);
+
     cserver = TCPopenserver(HostIP,HostPort);
 
     if (cserver == NULL){
