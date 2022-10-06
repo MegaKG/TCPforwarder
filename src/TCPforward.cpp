@@ -6,6 +6,9 @@
 #include <vector>
 #include <pthread.h>
 
+#include "MainConfigLoader.h"
+#include "HelpMenu.h"
+
 using namespace std;
 
 string HostIP = "127.0.0.1";
@@ -14,6 +17,9 @@ int HostPort = 5000;
 int DestPort = 22;
 int bufsize = 1024;
 int ConLimit = 0;
+
+int ControlSocket;
+string ControlSocketPath;
 
 struct forwarderArgs {
   struct TCPConnection* From;
@@ -143,6 +149,8 @@ void garbageCollector(){
 }
 
 void mainServer(){
+    printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize,ConLimit);
+
     struct TCPServer* cserver = TCPopenserver(HostIP,HostPort);
 
     if (cserver == NULL){
@@ -155,8 +163,15 @@ void mainServer(){
 
     int IDcounter = 0;
     while (1){
+        if ((Clients.size() > ConLimit) && (ConLimit != 0)){
+            while (Clients.size() > ConLimit){
+                garbageCollector();
+                usleep(1000);
+            }
+        }
+
         garbageCollector();
-        
+
         NewServerCon = TCPaccept(cserver);
         printf("Accept Client %i\n",IDcounter);
 
@@ -175,5 +190,20 @@ void mainServer(){
 }
 
 int main(int argc, char** argv){
+    //Load Configuration
+	if (argc == 1){
+        printHelp(argv);
+        return -1; 
+    }
+
+    int loadResult = loadSettings(argc,argv,&HostIP,&DestIP,&HostPort,&DestPort,&bufsize,&ControlSocketPath,&ControlSocket,&ConLimit);
+    if (loadResult < 0){
+        printHelp(argv);
+        return -1;
+    }
+    
+    printf("Loaded Configuration\n");
+
+
     mainServer();
 }

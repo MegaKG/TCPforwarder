@@ -25,6 +25,7 @@ const char* ArgTags[3]{
     "-dport",
 };
 
+
 //This function loads the Configuration
 int loadSettings(int argc, char** argv, string *HostIP, string *DestIP, int *HostPort, int *DestPort, int *bufsize, string *ControlSocketPath, int *ControlSocket, int *ConLimit ){
     struct configData* MyArgs = readArgs(argc,argv);
