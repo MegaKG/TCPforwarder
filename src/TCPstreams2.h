@@ -22,17 +22,17 @@ struct TCPConnection {
 };
 
 
-struct TCPServer* TCPopenserver(string IP, int port){
+struct TCPServer* TCPopenserver(const char* IP, int port){
     int opt = 1;
     int server;
     
     struct TCPServer* MySock = (struct TCPServer*)malloc(sizeof(struct TCPServer));
     
-     if (strcmp(IP.c_str(),"0.0.0.0") == 0){
+     if (strcmp(IP,"0.0.0.0") == 0){
         MySock->address.sin_addr.s_addr = INADDR_ANY;
     }
     else {
-        inet_pton(AF_INET, IP.c_str(), &MySock->address.sin_addr);
+        inet_pton(AF_INET, IP, &MySock->address.sin_addr);
     }
 
     MySock->address.sin_family = AF_INET;
@@ -115,7 +115,7 @@ char* TCPgetdat(struct TCPConnection* socketin, int buffer = 1024){
 }
 
 
-struct TCPConnection* TCPopenclient(string IP, int port){
+struct TCPConnection* TCPopenclient(const char* IP, int port){
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     struct TCPConnection* Con = (struct TCPConnection*)malloc(sizeof(struct TCPConnection));
 
@@ -129,7 +129,7 @@ struct TCPConnection* TCPopenclient(string IP, int port){
     Con->address.sin_port = htons(port);
 
     //Convert IP Addresses
-    if ( inet_pton(AF_INET, IP.c_str(), &Con->address.sin_addr) <= 0 ){
+    if ( inet_pton(AF_INET, IP, &Con->address.sin_addr) <= 0 ){
         perror("Socket Error 2:");
         return NULL; // Error 2
     }

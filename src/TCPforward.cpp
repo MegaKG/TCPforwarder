@@ -7,19 +7,10 @@
 #include <pthread.h>
 
 #include "MainConfigLoader.h"
-#include "HelpMenu.h"
 
 using namespace std;
 
-string HostIP = "127.0.0.1";
-string DestIP = "192.168.0.43";
-int HostPort = 5000;
-int DestPort = 22;
-int bufsize = 1024;
-int ConLimit = 0;
-
-int ControlSocket;
-string ControlSocketPath;
+configLoader* MainConfig;
 
 struct forwarderArgs {
   struct TCPConnection* From;
@@ -50,7 +41,7 @@ class clientHandler {
     public:
         clientHandler(struct TCPConnection* ServerCon,int ID, int BufSize) {
             this->ServerCon = ServerCon;
-            this->ClientCon = TCPopenclient(DestIP,DestPort);
+            this->ClientCon = TCPopenclient(MainConfig->getDestIP(),MainConfig->getDestPort());
 
             this->ID = ID;
             this->bufsize = BufSize;
@@ -149,9 +140,9 @@ void garbageCollector(){
 }
 
 void mainServer(){
-    printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",HostIP.c_str(),HostPort,DestIP.c_str(),DestPort,bufsize,ConLimit);
+    printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",MainConfig->getHostIP(),MainConfig->getHostPort(),MainConfig->getDestIP(),MainConfig->getDestPort(),MainConfig->getBufferSize(),MainConfig->getConnectionLimit());
 
-    struct TCPServer* cserver = TCPopenserver(HostIP,HostPort);
+    struct TCPServer* cserver = TCPopenserver(MainConfig->getHostIP(),MainConfig->getHostPort());
 
     if (cserver == NULL){
         printf("Failed to open Server Socket, Check Permissions!\n");
@@ -163,8 +154,8 @@ void mainServer(){
 
     int IDcounter = 0;
     while (1){
-        if ((Clients.size() > ConLimit) && (ConLimit != 0)){
-            while (Clients.size() > ConLimit){
+        if ((Clients.size() > MainConfig->getConnectionLimit()) && (MainConfig->getConnectionLimit() != 0)){
+            while (Clients.size() > MainConfig->getConnectionLimit()){
                 garbageCollector();
                 usleep(1000);
             }
@@ -191,19 +182,8 @@ void mainServer(){
 
 int main(int argc, char** argv){
     //Load Configuration
-	if (argc == 1){
-        printHelp(argv);
-        return -1; 
-    }
-
-    int loadResult = loadSettings(argc,argv,&HostIP,&DestIP,&HostPort,&DestPort,&bufsize,&ControlSocketPath,&ControlSocket,&ConLimit);
-    if (loadResult < 0){
-        printHelp(argv);
-        return -1;
-    }
+    MainConfig = new configLoader(argc,argv);
     
     printf("Loaded Configuration\n");
-
-
     mainServer();
 }
