@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <pthread.h>
+#include <signal.h>
 
 #include "MainConfigLoader.h"
 
@@ -20,20 +21,21 @@ struct forwarderArgs {
 };
 
 void* forwarder(void * MyArgs){
-            struct forwarderArgs* InputArgs = (struct forwarderArgs*)MyArgs;
-            char Buffer[InputArgs->bufsize];
+    signal(SIGPIPE, SIG_IGN); // Ignore Read Errors, the program can detect and fix these properly
+    struct forwarderArgs* InputArgs = (struct forwarderArgs*)MyArgs;
+    char Buffer[InputArgs->bufsize];
 
-            int haveRead;
+    int haveRead;
 
-            while (*InputArgs->Status){
-                haveRead = read(InputArgs->From->fd,Buffer,InputArgs->bufsize);
-                if (haveRead <= 0){
-                    *InputArgs->Status = 0;
-                }
-                else {
-                    send(InputArgs->To->fd,Buffer,haveRead, 0);
-                }
-            }
+    while (*InputArgs->Status){
+        haveRead = read(InputArgs->From->fd,Buffer,InputArgs->bufsize);
+        if (haveRead <= 0){
+            *InputArgs->Status = 0;
+        }
+        else {
+            send(InputArgs->To->fd,Buffer,haveRead, 0);
+        }
+    }
 }
 
 
@@ -89,8 +91,8 @@ class clientHandler {
             pthread_join(*this->C2ST,&retval);
             pthread_join(*this->S2CT,&retval);
 
-            //close(this->ClientCon->fd);
-            //close(this->ServerCon->fd);
+            close(this->ClientCon->fd);
+            close(this->ServerCon->fd);
 
             free(this->C2ST);
             free(this->S2CT);
