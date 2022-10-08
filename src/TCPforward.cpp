@@ -15,6 +15,8 @@ using namespace std;
 
 configLoader* MainConfig;
 
+int mainThreadFlag = 1;
+
 struct forwarderArgs {
   struct TCPConnection* From;
   struct TCPConnection* To;
@@ -83,6 +85,10 @@ class clientHandler {
 
         int getStatus(){
             return this->Status;
+        }
+
+        void setStatus(int Status){
+            this->Status = Status;
         }
 
         ~clientHandler(){
@@ -176,11 +182,12 @@ class controlServer {
                 this->MyConnection = UNIXaccept(this->ControlServerSocket);
                 this->CLIENTCON = 1;
                 while (this->CLIENTCON){
+                    MSG_BUF = UNIXgetdat(this->MyConnection,1);
 
+                    free(MSG_BUF);
                 }
+                free(this->MyConnection);
             }
-            
-
         }
 
         ~controlServer(){
@@ -188,6 +195,13 @@ class controlServer {
         }
 
 };
+
+void* controlThreadFunction(void *){
+    controlServer* MainControl = new controlServer();
+    MainControl->run();
+    printf("Control Server Terminate\n");
+    delete MainControl;
+}
 
 void mainServer(){
     printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",MainConfig->getHostIP(),MainConfig->getHostPort(),MainConfig->getDestIP(),MainConfig->getDestPort(),MainConfig->getBufferSize(),MainConfig->getConnectionLimit());
@@ -203,7 +217,7 @@ void mainServer(){
     clientHandler* NewClient;
 
     int IDcounter = 0;
-    while (1){
+    while (mainThreadFlag){
         if ((Clients.size() > MainConfig->getConnectionLimit()) && (MainConfig->getConnectionLimit() != 0)){
             while (Clients.size() > MainConfig->getConnectionLimit()){
                 garbageCollector();
@@ -233,7 +247,34 @@ void mainServer(){
 int main(int argc, char** argv){
     //Load Configuration
     MainConfig = new configLoader(argc,argv);
-    
     printf("Loaded Configuration\n");
+
+
+    //The Control Server
+    pthread_t* ControlServerThread;
+    void* Blank;
+    if (MainConfig->getControlFlag() == 1){
+        printf("Starting Control Server\n");
+        ControlServerThread = (pthread_t*)malloc(sizeof(pthread_t));
+        pthread_create(ControlServerThread, NULL, &controlThreadFunction,Blank);
+
+    }
+
+    //The Main Server
+    printf("Start Server\n");
     mainServer();
+
+    //Clean Up
+    if (MainConfig->getControlFlag() == 1){
+        pthread_cancel(*ControlServerThread);
+        pthread_join(*ControlServerThread,&Blank);
+        free(ControlServerThread);
+        printf("Cleaned Up Control Server\n");
+    }
+
+    for (int i = 0; i < Clients.size(); i++){
+        Clients[i]->setStatus(0);
+    }
+    garbageCollector();
+    printf("Cleaned Up Connections\n");
 }

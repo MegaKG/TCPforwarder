@@ -78,6 +78,12 @@ class configLoader {
             printf("Dest IP %s\n",DestDNSBuffer);
             return DestDNSBuffer;
         }
+        const char* getControlPath(){
+            return this->ControlSocketPath.c_str();
+        }
+        int getControlFlag(){
+            return this->ControlSocket;
+        }
 
         configLoader(int argc, char** argv){
             if (argc == 1){
