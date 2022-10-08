@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "TCPstreams2.h"
 #include <iostream>
 #include <string>
 #include <vector>
 #include <pthread.h>
 #include <signal.h>
+#include <math.h>
 
+#include "UNIXstreams.h"
+#include "TCPstreams2.h"
 #include "MainConfigLoader.h"
 
 using namespace std;
@@ -52,7 +54,10 @@ class clientHandler {
                 this->Status = 0;
                 printf("Connection Failed\n");
             }
-            this->Status = 1;
+            else {
+                this->Status = 1;
+            }
+            
 
             this->C2SA.bufsize = this->bufsize;
             this->S2CA.bufsize = this->bufsize;
@@ -140,6 +145,49 @@ void garbageCollector(){
         Clients.erase(Clients.begin() + ToDel[i]);
     }
 }
+
+
+class controlServer {
+    private:
+        struct UNIXServer* ControlServerSocket;
+        struct UNIXConnection* MyConnection;
+        int RUN = 1;
+        int CLIENTCON = 1;
+
+        int integerStringSize(int Input){
+            return (((int)ceil(log10(Input + 1)))+ 1);
+        }
+
+    public:
+        controlServer(){
+            this->ControlServerSocket = UNIXopenserver((char*)MainConfig->getHostIP());
+            if (ControlServerSocket == NULL){
+                printf("Failed to Open Control Server\n");
+                exit(1);
+            }
+
+            this->RUN = 1;
+            this->CLIENTCON = 1;
+        }
+
+        void run(){
+            char* MSG_BUF;
+            while (this->RUN){
+                this->MyConnection = UNIXaccept(this->ControlServerSocket);
+                this->CLIENTCON = 1;
+                while (this->CLIENTCON){
+
+                }
+            }
+            
+
+        }
+
+        ~controlServer(){
+            free(this->ControlServerSocket);
+        }
+
+};
 
 void mainServer(){
     printf("Forwarding %s:%i to %s:%i buffer %i limit is %i\n",MainConfig->getHostIP(),MainConfig->getHostPort(),MainConfig->getDestIP(),MainConfig->getDestPort(),MainConfig->getBufferSize(),MainConfig->getConnectionLimit());

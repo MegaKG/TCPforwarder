@@ -1,11 +1,13 @@
-#include "LoadConfig2.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "StringInputs2.h"
 #include <string>
 #include <string.h>
 #include <iostream>
+
 #include "HelpMenu.h"
+#include "StringInputs2.h"
+#include "LoadConfig2.h"
+#include "dnsresolve.h"
 
 using namespace std;
 
@@ -40,6 +42,16 @@ class configLoader {
         int ControlSocket = 0;
 
         int ConLimit = 0;
+
+
+        char* LastPTR;
+
+        void cleanPTR(){
+            if (LastPTR != NULL){
+                free(LastPTR);
+                LastPTR = NULL;
+            }
+        }
 
     public:
         const char* getHostIP(){
