@@ -43,19 +43,19 @@ class configLoader {
 
         int ConLimit = 0;
 
-
-        char* LastPTR;
-
-        void cleanPTR(){
-            if (LastPTR != NULL){
-                free(LastPTR);
-                LastPTR = NULL;
-            }
-        }
+        char DestDNSBuffer[16];
+        char HostDNSBuffer[16];
 
     public:
-        const char* getHostIP(){
-            return this->HostIP.c_str();
+        const char* getHostIP(){ 
+            memset(HostDNSBuffer,0,16);
+            char* IP = getIP((char*)this->HostIP.c_str());
+            strcpy(HostDNSBuffer,IP);
+            free(IP);
+
+            printf("Host IP %s\n",HostDNSBuffer);
+            return HostDNSBuffer;
+
         }
         int getHostPort(){
             return this->HostPort;
@@ -70,7 +70,13 @@ class configLoader {
             return this->ConLimit;
         }
         const char* getDestIP(){
-            return this->DestIP.c_str();
+            memset(DestDNSBuffer,0,16);
+            char* IP = getIP((char*)this->DestIP.c_str());
+            strcpy(DestDNSBuffer,IP);
+            free(IP);
+
+            printf("Dest IP %s\n",DestDNSBuffer);
+            return DestDNSBuffer;
         }
 
         configLoader(int argc, char** argv){
