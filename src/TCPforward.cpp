@@ -52,12 +52,16 @@ class clientHandler {
             this->ID = ID;
             this->bufsize = BufSize;
 
+
+
             if (this->ClientCon == NULL){
                 this->Status = 0;
+                this->DeadOnArrival = 1;
                 printf("Connection Failed\n");
             }
             else {
                 this->Status = 1;
+                this->DeadOnArrival = 0;
             }
             
 
@@ -73,13 +77,16 @@ class clientHandler {
             this->S2CA.From = this->ServerCon;
 
 
-            this->C2ST = (pthread_t*)malloc(sizeof(pthread_t));
-            pthread_create(this->C2ST, NULL, &forwarder, &C2SA);
+            
+            if (this->Status){
+                this->C2ST = (pthread_t*)malloc(sizeof(pthread_t));
+                pthread_create(this->C2ST, NULL, &forwarder, &C2SA);
 
-            this->S2CT = (pthread_t*)malloc(sizeof(pthread_t));
-            pthread_create(this->S2CT, NULL, &forwarder, &S2CA);
+                this->S2CT = (pthread_t*)malloc(sizeof(pthread_t));
+                pthread_create(this->S2CT, NULL, &forwarder, &S2CA);
 
-            printf("Client Init %i\n",this->ID);
+                printf("Client Init %i\n",this->ID);
+            }
 
         }
 
@@ -96,17 +103,19 @@ class clientHandler {
 
             this->Status = 0;
 
-            pthread_cancel(*this->C2ST);
-            pthread_cancel(*this->S2CT);
+            if (this->DeadOnArrival == 0){
+                pthread_cancel(*this->C2ST);
+                pthread_cancel(*this->S2CT);
 
-            pthread_join(*this->C2ST,&retval);
-            pthread_join(*this->S2CT,&retval);
+                pthread_join(*this->C2ST,&retval);
+                pthread_join(*this->S2CT,&retval);
 
-            close(this->ClientCon->fd);
+                close(this->ClientCon->fd);
+                
+                free(this->C2ST);
+                free(this->S2CT);
+            }
             close(this->ServerCon->fd);
-
-            free(this->C2ST);
-            free(this->S2CT);
 
             delete this->ClientCon;
             delete this->ServerCon;
@@ -121,6 +130,7 @@ class clientHandler {
         struct TCPConnection* ClientCon;
 
         int Status;
+        int DeadOnArrival;
 
         int ID;
         int bufsize;
@@ -229,6 +239,7 @@ void mainServer(){
 
         NewServerCon = TCPaccept(cserver);
         printf("Accept Client %i\n",IDcounter);
+        printf("Running %i\n",Clients.size());
 
         NewClient = new clientHandler(NewServerCon,IDcounter,1024);
 
