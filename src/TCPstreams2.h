@@ -19,6 +19,8 @@ struct TCPServer {
 struct TCPConnection {
 	struct sockaddr_in address;
 	int fd;
+    const char* IP;
+    int Port;
 };
 
 
@@ -89,6 +91,8 @@ struct TCPConnection* TCPaccept(struct TCPServer* server){
         return NULL; //Error 5
     }
     Con->fd = new_socket;
+    Con->IP = inet_ntoa(Con->address.sin_addr);
+    Con->Port = Con->address.sin_port;
     return Con;
 }
 
@@ -140,6 +144,8 @@ struct TCPConnection* TCPopenclient(const char* IP, int port){
     }
 
     Con->fd = sock;
+    Con->IP = IP;
+    Con->Port = port;
     return Con;
 
 }

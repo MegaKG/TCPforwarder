@@ -85,6 +85,14 @@ class configLoader {
             return this->ControlSocket;
         }
 
+        void setDestIP(string Target){
+            DestIP = Target;
+        }
+
+        void setDestPort(int Target){
+            DestPort = Target;
+        }
+
         configLoader(int argc, char** argv){
             if (argc == 1){
                 printHelp(argv);

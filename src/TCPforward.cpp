@@ -6,8 +6,8 @@
 #include <pthread.h>
 #include <signal.h>
 #include <math.h>
+#include <string.h>
 
-#include "UNIXstreams.h"
 #include "TCPstreams2.h"
 #include "MainConfigLoader.h"
 
@@ -94,6 +94,24 @@ class clientHandler {
             return this->Status;
         }
 
+        int getID(){
+            return ID;
+        }
+
+        const char* getSourceIP(){
+            return this->ServerCon->IP; 
+        }
+        const char* getDestinationIP(){
+            return this->ClientCon->IP; 
+        }
+        int getSourcePort(){
+            return this->ServerCon->Port;
+        }
+        int getDestinationPort(){
+            return this->ClientCon->Port;
+        }
+
+
         void setStatus(int Status){
             this->Status = Status;
         }
@@ -165,43 +183,80 @@ void garbageCollector(){
 
 class controlServer {
     private:
-        struct UNIXServer* ControlServerSocket;
-        struct UNIXConnection* MyConnection;
-        int RUN = 1;
-        int CLIENTCON = 1;
-
-        int integerStringSize(int Input){
-            return (((int)ceil(log10(Input + 1)))+ 1);
-        }
+        char RUN;
 
     public:
         controlServer(){
-            this->ControlServerSocket = UNIXopenserver((char*)MainConfig->getHostIP());
-            if (ControlServerSocket == NULL){
-                printf("Failed to Open Control Server\n");
-                exit(1);
-            }
-
-            this->RUN = 1;
-            this->CLIENTCON = 1;
+           RUN = 1;
         }
 
         void run(){
-            char* MSG_BUF;
-            while (this->RUN){
-                this->MyConnection = UNIXaccept(this->ControlServerSocket);
-                this->CLIENTCON = 1;
-                while (this->CLIENTCON){
-                    MSG_BUF = UNIXgetdat(this->MyConnection,1);
-
-                    free(MSG_BUF);
+            string MyInput;
+            sleep(2);
+            while (this->RUN && cin){
+                printf("> ");
+                getline(cin,MyInput);
+                
+                if ((MyInput.compare("list") == 0) || (MyInput.compare("ls") == 0)){
+                    printf("Active Clients:\n");
+                    for (int i = 0; i < Clients.size(); i++){
+                        if (Clients[i]->getStatus()){
+                            printf("%i: %s : %i -> %s : %i\n",Clients[i]->getID(),Clients[i]->getSourceIP(),Clients[i]->getSourcePort(),Clients[i]->getDestinationIP(),Clients[i]->getDestinationPort());
+                        }
+                    }
                 }
-                free(this->MyConnection);
+                if ((MyInput.compare("help") == 0) || (MyInput.compare("?") == 0)){
+                    printf("Commands:\nhelp | ? -> This Menu\nlist | ls -> List active Connections\nstop -> Stop the Forwarder\nkill -> kill a connection\nsetAddress -> Specify New Target Address\nsetPort -> Specify New Target Port\n");
+                }
+                if (MyInput.compare("stop") == 0){
+                    RUN = 0;
+                }
+                if (MyInput.compare("kill") == 0){
+                    printf("Connection Number > ");
+                    getline(cin,MyInput);
+
+                    int killID = stosi((char*)MyInput.c_str());
+                    if (killID == 0){
+                        printf("Invalid Input\n",killID);
+                    }
+                    else {
+                        printf("Terminating %i\n",killID);
+                        for (int i = 0; i < Clients.size(); i++){
+                            if (Clients[i]->getID() == killID){
+                                printf("Matched\n");
+                                Clients[i]->setStatus(0);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (MyInput.compare("setAddr") == 0){
+                    printf("Target Address > ");
+                    getline(cin,MyInput);
+                    printf("Assign Address %s\n",MyInput.c_str());
+                    MainConfig->setDestIP(MyInput);
+                }
+                if (MyInput.compare("setPort") == 0){
+                    printf("Target Port > ");
+                    getline(cin,MyInput);
+                    
+                    int Port = stosi((char*)MyInput.c_str());
+                    if (Port == 0){
+                        printf("Invalid Input\n",Port);
+                    }
+                    else {
+                        printf("Assign Port %i\n",Port);
+                        MainConfig->setDestPort(Port);
+                    }
+                    
+                }
+                
             }
         }
 
         ~controlServer(){
-            free(this->ControlServerSocket);
+            printf("Control Server Terminate\n");
+            
         }
 
 };
@@ -210,6 +265,7 @@ void* controlThreadFunction(void *){
     controlServer* MainControl = new controlServer();
     MainControl->run();
     printf("Control Server Terminate\n");
+    mainThreadFlag = 0;
     delete MainControl;
 }
 
@@ -226,7 +282,7 @@ void mainServer(){
     struct TCPConnection* NewServerCon;
     clientHandler* NewClient;
 
-    int IDcounter = 0;
+    int IDcounter = 1;
     while (mainThreadFlag){
         if ((Clients.size() > MainConfig->getConnectionLimit()) && (MainConfig->getConnectionLimit() != 0)){
             while (Clients.size() > MainConfig->getConnectionLimit()){
