@@ -12,5 +12,5 @@ void printHelp(char** argv){
     printf("\t-dport\t: The Destination Port\n");
     printf("\t-buf\t: The Buffer size, usually 1024 (Optional)\n");
 	printf("\t-climit\t: The Connection Limit, Set to 0 for unlimited. Default is 0 (Optional)\n");
-	printf("\t-control\t: The Control Unix Socket (Optional) [Work in Progress]\n");
+	printf("\t-control\t: The Control interface, argument is required, but isn't used for now\n");
 }
